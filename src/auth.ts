@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express"
-import jwt from "jsonwebtoken"
+import jwt, { VerifyOptions } from "jsonwebtoken"
 import {
     fetchBatchUserMetadata,
     fetchTokenVerificationMetadata,
@@ -78,11 +78,11 @@ export function initAuth(opts: AuthOptions) {
 }
 
 function createUserExtractingMiddleware({
-    requireCredentials,
-    debugMode,
-    tokenVerificationMetadataPromise,
-}: CreateRequestHandlerArgs) {
-    return async function (req: Request, res: Response, next: NextFunction) {
+                                            requireCredentials,
+                                            debugMode,
+                                            tokenVerificationMetadataPromise,
+                                        }: CreateRequestHandlerArgs) {
+    return async function(req: Request, res: Response, next: NextFunction) {
         try {
             const tokenVerificationMetadata = await getTokenVerificationMetadata(tokenVerificationMetadataPromise)
             const bearerToken = extractBearerToken(req)
@@ -102,7 +102,7 @@ function createUserExtractingMiddleware({
 
 function createRequireOrgMemberMiddleware(
     debugMode: boolean,
-    requireUser: (req: Request, res: Response, next: NextFunction) => void
+    requireUser: (req: Request, res: Response, next: NextFunction) => void,
 ) {
     return function requireOrgMember(args?: RequireOrgMemberArgs) {
         // By default, expect the orgId to be passed in as a path parameter
@@ -117,19 +117,19 @@ function createRequireOrgMemberMiddleware(
                 "Unknown role ",
                 minimumRequiredRole,
                 ". " +
-                    "Role must be one of [UserRole.Owner, UserRole.Admin, UserRole.Member] or undefined. " +
-                    "Requests will be rejected to be safe."
+                "Role must be one of [UserRole.Owner, UserRole.Admin, UserRole.Member] or undefined. " +
+                "Requests will be rejected to be safe.",
             )
         }
 
-        return function (req: Request, res: Response, next: NextFunction) {
+        return function(req: Request, res: Response, next: NextFunction) {
             // First we call into requireUser to validate the token and set the user
             return requireUser(req, res, () => {
                 if (!req.user) {
                     return handleUnauthorizedExceptionWithRequiredCredentials(
                         new UnauthorizedException("No user credentials found for requireOrgMember"),
                         debugMode,
-                        res
+                        res,
                     )
                 }
 
@@ -140,7 +140,7 @@ function createRequireOrgMemberMiddleware(
                     return handleUnauthorizedExceptionWithRequiredCredentials(
                         new UnauthorizedException(`User is not a member of org ${requiredOrgId}`),
                         debugMode,
-                        res
+                        res,
                     )
                 }
 
@@ -149,7 +149,7 @@ function createRequireOrgMemberMiddleware(
                 if (!validRole) {
                     return handleUnexpectedException({
                         exception: new UnexpectedException(
-                            `Configuration error. Minimum required role (${minimumRequiredRole}) is invalid.`
+                            `Configuration error. Minimum required role (${minimumRequiredRole}) is invalid.`,
                         ),
                         debugMode,
                         res,
@@ -157,10 +157,10 @@ function createRequireOrgMemberMiddleware(
                 } else if (minimumRequiredRole !== undefined && orgMemberInfo.userRole < minimumRequiredRole) {
                     return handleUnauthorizedExceptionWithRequiredCredentials(
                         new UnauthorizedException(
-                            `User's role ${orgMemberInfo.userRole} doesn't meet minimum required role`
+                            `User's role ${orgMemberInfo.userRole} doesn't meet minimum required role`,
                         ),
                         debugMode,
-                        res
+                        res,
                     )
                 }
 
@@ -186,8 +186,8 @@ function extractBearerToken(req: Request): string {
 }
 
 async function verifyToken(bearerToken: string, tokenVerificationMetadata: TokenVerificationMetadata) {
-    const options = {
-        algorithms: [tokenVerificationMetadata.algo],
+    const options: VerifyOptions = {
+        algorithms: ["RS256"],
         issuer: tokenVerificationMetadata.issuer,
     }
     try {
@@ -213,12 +213,12 @@ function handleUnexpectedException({ exception, debugMode, res }: HandleUnexpect
 
 // With an unauthorized exception, we only reject the request if credentials are required
 function handleUnauthorizedException({
-    exception,
-    requireCredentials,
-    debugMode,
-    res,
-    next,
-}: HandleUnauthorizedExceptionArgs) {
+                                         exception,
+                                         requireCredentials,
+                                         debugMode,
+                                         res,
+                                         next,
+                                     }: HandleUnauthorizedExceptionArgs) {
     if (requireCredentials) {
         handleUnauthorizedExceptionWithRequiredCredentials(exception, debugMode, res)
     } else {
@@ -229,7 +229,7 @@ function handleUnauthorizedException({
 function handleUnauthorizedExceptionWithRequiredCredentials(
     exception: UnauthorizedException,
     debugMode: boolean,
-    res: Response
+    res: Response,
 ) {
     if (debugMode) {
         res.status(exception.status).send(exception.message)
@@ -239,7 +239,7 @@ function handleUnauthorizedExceptionWithRequiredCredentials(
 }
 
 async function getTokenVerificationMetadata(
-    tokenVerificationMetadataPromise: Promise<TokenVerificationMetadata | void>
+    tokenVerificationMetadataPromise: Promise<TokenVerificationMetadata | void>,
 ) {
     const tokenVerificationMetadata = await tokenVerificationMetadataPromise
     // If we were unable to fetch the token verification metadata, reject all requests

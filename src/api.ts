@@ -5,7 +5,6 @@ import { UserMetadata } from "./user"
 
 export type TokenVerificationMetadata = {
     verifierKey: string
-    algo: Algorithm
     issuer: string
 }
 
@@ -18,16 +17,8 @@ export function fetchTokenVerificationMetadata(authUrl: URL, apiKey: string): Pr
         }
 
         const jsonParse = JSON.parse(httpResponse.response)
-
-        // This should never happen, but it's worth being extra defensive
-        const algo: Algorithm = jsonParse.signing_algo
-        if (algo.toLowerCase() === "none") {
-            throw Error("Unknown error when fetching token verification metadata")
-        }
-
         return {
             verifierKey: jsonParse.verifier_key_pem,
-            algo: jsonParse.signing_algo,
             issuer: formatIssuer(authUrl),
         }
     })
@@ -41,7 +32,7 @@ export function fetchUserMetadataByQuery(authUrl: URL, apiKey: string, query: an
         } else if (httpResponse.statusCode === 404) {
             return null
         } else if (httpResponse.statusCode && httpResponse.statusCode >= 400) {
-            throw Error("Unknown error when fetching server info")
+            throw Error("Unknown error when fetching user metadata")
         }
 
         const jsonParse = JSON.parse(httpResponse.response)
@@ -64,7 +55,7 @@ export function fetchBatchUserMetadata(
             if (httpResponse.statusCode === 401) {
                 throw Error("apiKey is incorrect")
             } else if (httpResponse.statusCode && httpResponse.statusCode >= 400) {
-                throw Error("Unknown error when fetching server info")
+                throw Error("Unknown error when fetching batch user metadata")
             }
 
             // Make user_id to userId since the API response is snake_case and typescript convention is camelCase
