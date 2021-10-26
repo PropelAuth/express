@@ -10,6 +10,7 @@ import UnauthorizedException from "./UnauthorizedException"
 import UnexpectedException from "./UnexpectedException"
 import { InternalUser, toUser, UserMetadata, UserRole } from "./user"
 import { validateAuthUrl } from "./validators"
+import ForbiddenException from "./ForbiddenException"
 
 export type AuthOptions = {
     debugMode?: boolean
@@ -137,8 +138,8 @@ function createRequireOrgMemberMiddleware(
                 const requiredOrgId = orgIdExtractorWithDefault(req)
                 const orgIdToOrgMemberInfo = req.user.orgIdToOrgMemberInfo
                 if (!orgIdToOrgMemberInfo || !orgIdToOrgMemberInfo.hasOwnProperty(requiredOrgId)) {
-                    return handleUnauthorizedExceptionWithRequiredCredentials(
-                        new UnauthorizedException(`User is not a member of org ${requiredOrgId}`),
+                    return handleForbiddenExceptionWithRequiredCredentials(
+                        new ForbiddenException(`User is not a member of org ${requiredOrgId}`),
                         debugMode,
                         res,
                     )
@@ -155,8 +156,8 @@ function createRequireOrgMemberMiddleware(
                         res,
                     })
                 } else if (minimumRequiredRole !== undefined && orgMemberInfo.userRole < minimumRequiredRole) {
-                    return handleUnauthorizedExceptionWithRequiredCredentials(
-                        new UnauthorizedException(
+                    return handleForbiddenExceptionWithRequiredCredentials(
+                        new ForbiddenException(
                             `User's role ${orgMemberInfo.userRole} doesn't meet minimum required role`,
                         ),
                         debugMode,
@@ -228,6 +229,18 @@ function handleUnauthorizedException({
 
 function handleUnauthorizedExceptionWithRequiredCredentials(
     exception: UnauthorizedException,
+    debugMode: boolean,
+    res: Response,
+) {
+    if (debugMode) {
+        res.status(exception.status).send(exception.message)
+    } else {
+        res.status(exception.status).send("Unauthorized")
+    }
+}
+
+function handleForbiddenExceptionWithRequiredCredentials(
+    exception: ForbiddenException,
     debugMode: boolean,
     res: Response,
 ) {

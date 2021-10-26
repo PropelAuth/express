@@ -1,4 +1,3 @@
-import { Algorithm } from "jsonwebtoken"
 import qs from "querystring"
 import { httpRequest } from "./http"
 import { UserMetadata } from "./user"
@@ -48,7 +47,7 @@ export function fetchBatchUserMetadata(
     authUrl: URL,
     apiKey: string,
     type: string,
-    values: string[]
+    values: string[],
 ): Promise<{ [key: string]: UserMetadata }> {
     return httpRequest(authUrl, apiKey, `/api/v1/user_info/${type}`, "POST", JSON.stringify(values)).then(
         (httpResponse) => {
@@ -59,14 +58,14 @@ export function fetchBatchUserMetadata(
             }
 
             // Make user_id to userId since the API response is snake_case and typescript convention is camelCase
-            return JSON.parse(httpResponse.response, function (key, value) {
+            return JSON.parse(httpResponse.response, function(key, value) {
                 if (key === "user_id") {
                     this.userId = value
                 } else {
                     return value
                 }
             })
-        }
+        },
     )
 }
 

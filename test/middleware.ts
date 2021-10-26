@@ -318,7 +318,7 @@ test("requireOrgMember fails for valid access token but unknown org", async () =
     const accessToken = createAccessToken({ internalUser, privateKey })
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-    const { res, sendFn } = createResExpectingStatusCode(401)
+    const { res, sendFn } = createResExpectingStatusCode(403)
     const next = jest.fn()
 
     const orgIdExtractor = (_req: Request) => uuid()
@@ -369,7 +369,7 @@ test("requireOrgMember works with minimumRequiredRole", async () => {
     const rolesThatShouldSucceed = new Set([UserRole.Admin, UserRole.Member])
     for (let role of [UserRole.Owner, UserRole.Admin, UserRole.Member]) {
         const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-        const { res, sendFn } = createResExpectingStatusCode(401)
+        const { res, sendFn } = createResExpectingStatusCode(403)
         const next = jest.fn()
 
         const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
