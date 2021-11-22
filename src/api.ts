@@ -7,7 +7,13 @@ export type TokenVerificationMetadata = {
     issuer: string
 }
 
-export function fetchTokenVerificationMetadata(authUrl: URL, apiKey: string): Promise<TokenVerificationMetadata> {
+export function fetchTokenVerificationMetadata(authUrl: URL,
+                                               apiKey: string,
+                                               manualTokenVerificationMetadata?: TokenVerificationMetadata): Promise<TokenVerificationMetadata> {
+    if (manualTokenVerificationMetadata) {
+        return Promise.resolve(manualTokenVerificationMetadata)
+    }
+
     return httpRequest(authUrl, apiKey, "/api/v1/token_verification_metadata", "GET").then((httpResponse) => {
         if (httpResponse.statusCode === 401) {
             throw Error("apiKey is incorrect")

@@ -5,6 +5,7 @@ import nock from "nock"
 import { v4 as uuid } from "uuid"
 import { initAuth, User } from "../src"
 import { InternalOrgMemberInfo, InternalUser, toUser, UserRole } from "../src/user"
+import { TokenVerificationMetadata } from "../src/api"
 
 const AUTH_URL = "https://auth.example.com"
 const ALGO = "RS256"
@@ -55,6 +56,33 @@ test("optionalUser parses and sets req.user", async () => {
     expect(next).toBeCalledTimes(1)
     expect(nock.isDone()).toBe(true)
 })
+
+test("when manualTokenVerificationMetadata is specified, no fetch is made", async () => {
+    // Never setup the token verification endpoint
+    const {privateKey, publicKey} = await generateRsaKeyPair()
+    const tokenVerificationMetadata: TokenVerificationMetadata = {
+        issuer: AUTH_URL,
+        verifierKey: publicKey,
+    };
+    const { requireUser } = initAuth({
+        authUrl: AUTH_URL + "/",
+        apiKey: "irrelevant api key for this test",
+        manualTokenVerificationMetadata: tokenVerificationMetadata,
+    })
+
+    const internalUser = randomInternalUser()
+    const accessToken = createAccessToken({ internalUser, privateKey })
+
+    const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
+    const res = null as any as Response
+    const next = jest.fn()
+
+    await requireUser(req, res, next)
+    expect(req.user).toEqual(toUser(internalUser))
+    expect(next).toBeCalledTimes(1)
+    expect(nock.isDone()).toBe(true)
+})
+
 
 test("requireUser rejects expired access tokens", async () => {
     jest.useFakeTimers("modern")

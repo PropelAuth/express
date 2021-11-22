@@ -16,13 +16,28 @@ export type AuthOptions = {
     debugMode?: boolean
     authUrl: string
     apiKey: string
+
+    /**
+     * By default, this library performs a one-time fetch on startup for
+     *   token verification metadata from your authUrl using your apiKey.
+     *
+     * This is usually preferred to make sure you have the most up to date information,
+     *   however, in environments like serverless, this one-time fetch becomes a
+     *   per-request fetch.
+     *
+     * In those environments, you can specify the token verification metadata manually,
+     *   which you can obtain from your PropelAuth project.
+     */
+    manualTokenVerificationMetadata?: TokenVerificationMetadata
 }
 
 export function initAuth(opts: AuthOptions) {
     const debugMode: boolean = opts.debugMode === undefined ? false : opts.debugMode
     const authUrl: URL = validateAuthUrl(opts.authUrl)
     const apiKey: string = opts.apiKey
-    const tokenVerificationMetadataPromise = fetchTokenVerificationMetadata(authUrl, apiKey).catch((err) => {
+    const tokenVerificationMetadataPromise = fetchTokenVerificationMetadata(
+        authUrl, apiKey, opts.manualTokenVerificationMetadata
+    ).catch((err) => {
         console.error("Error initializing auth library. ", err)
     })
 
