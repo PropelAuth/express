@@ -188,7 +188,7 @@ function createRequireOrgMemberMiddleware(
 }
 
 function extractBearerToken(req: Request): string {
-    const authHeader = req.header("authorization")
+    const authHeader = req.headers.authorization
     if (!authHeader) {
         throw new UnauthorizedException("No authorization header found.")
     }

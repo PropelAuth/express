@@ -478,10 +478,9 @@ async function setupErrorTokenVerificationMetadataEndpoint(statusCode: number) {
 
 function createReqWithAuthorizationHeader(authorizationHeader?: string): Request {
     return {
-        header: jest.fn((x) => {
-            expect(x).toEqual("authorization")
-            return authorizationHeader
-        }),
+        headers: {
+            authorization: authorizationHeader
+        }
     } as any as Request
 }
 
