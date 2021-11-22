@@ -457,7 +457,6 @@ async function setupTokenVerificationMetadataEndpoint() {
         .reply(
             200,
             JSON.stringify({
-                signing_algo: ALGO,
                 verifier_key_pem: publicKey,
             })
         )
