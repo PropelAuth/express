@@ -44,7 +44,17 @@ export function fetchUserMetadataByQuery(authUrl: URL, apiKey: string, query: an
         return {
             userId: jsonParse.user_id,
             email: jsonParse.email,
+            emailConfirmed: jsonParse.email_confirmed,
+
             username: jsonParse.username,
+            firstName: jsonParse.first_name,
+            lastName: jsonParse.last_name,
+            pictureUrl: jsonParse.picture_url,
+
+            locked: jsonParse.locked,
+            enabled: jsonParse.enabled,
+            mfaEnabled: jsonParse.mfa_enabled,
+
         }
     })
 }
@@ -67,6 +77,16 @@ export function fetchBatchUserMetadata(
             return JSON.parse(httpResponse.response, function(key, value) {
                 if (key === "user_id") {
                     this.userId = value
+                } else if (key === "email_confirmed") {
+                    this.emailConfirmed = value;
+                } else if (key === "first_name") {
+                    this.firstName = value;
+                } else if (key === "last_name") {
+                    this.lastName = value;
+                } else if (key === "picture_url") {
+                    this.pictureUrl = value;
+                } else if (key === "mfa_enabled") {
+                    this.mfaEnabled = value;
                 } else {
                     return value
                 }

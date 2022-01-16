@@ -4,8 +4,18 @@ export type User = {
 }
 export type UserMetadata = {
     userId: string
+
     email: string
-    username: string
+    emailConfirmed: boolean,
+
+    username?: string
+    firstName?: string,
+    lastName?: string,
+    pictureUrl?: string,
+
+    locked: boolean,
+    enabled: boolean,
+    mfaEnabled: boolean,
 }
 
 export enum UserRole {
