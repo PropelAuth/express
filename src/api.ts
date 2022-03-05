@@ -5,6 +5,11 @@ import { UserMetadata } from "./user"
 export type TokenVerificationMetadata = {
     verifierKey: string
     issuer: string
+    roleNameToIndex: {[role_name: string]: number}
+}
+
+type Role = {
+    name: string
 }
 
 export function fetchTokenVerificationMetadata(authUrl: URL,
@@ -22,9 +27,16 @@ export function fetchTokenVerificationMetadata(authUrl: URL,
         }
 
         const jsonParse = JSON.parse(httpResponse.response)
+
+        const role_name_to_index: {[role_name: string]: number} = {}
+        jsonParse.roles?.forEach((role: Role, index: number) => {
+            role_name_to_index[role.name] = index
+        });
+
         return {
             verifierKey: jsonParse.verifier_key_pem,
             issuer: formatIssuer(authUrl),
+            roleNameToIndex: role_name_to_index,
         }
     })
 }

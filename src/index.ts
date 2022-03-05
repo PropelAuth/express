@@ -9,6 +9,7 @@ declare global {
         interface Request {
             user?: User
             org?: OrgMemberInfo
+            roleNameToIndex?: {[role_name: string]: number}
         }
     }
 }

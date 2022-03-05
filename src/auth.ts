@@ -8,7 +8,7 @@ import {
 } from "./api"
 import UnauthorizedException from "./UnauthorizedException"
 import UnexpectedException from "./UnexpectedException"
-import { InternalUser, toUser, UserMetadata, UserRole } from "./user"
+import { InternalUser, toUser, UserMetadata } from "./user"
 import { validateAuthUrl } from "./validators"
 import ForbiddenException from "./ForbiddenException"
 
@@ -89,7 +89,6 @@ export function initAuth(opts: AuthOptions) {
         fetchBatchUserMetadataByUserIds,
         fetchBatchUserMetadataByEmails,
         fetchBatchUserMetadataByUsernames,
-        UserRole,
     }
 }
 
@@ -101,6 +100,7 @@ function createUserExtractingMiddleware({
     return async function(req: Request, res: Response, next: NextFunction) {
         try {
             const tokenVerificationMetadata = await getTokenVerificationMetadata(tokenVerificationMetadataPromise)
+            req.roleNameToIndex = tokenVerificationMetadata.roleNameToIndex;
             const bearerToken = extractBearerToken(req)
             req.user = await verifyToken(bearerToken, tokenVerificationMetadata)
             next()
@@ -118,7 +118,7 @@ function createUserExtractingMiddleware({
 
 function createRequireOrgMemberMiddleware(
     debugMode: boolean,
-    requireUser: (req: Request, res: Response, next: NextFunction) => void,
+    requireUser: (req: Request, res: Response, next: NextFunction) => void
 ) {
     return function requireOrgMember(args?: RequireOrgMemberArgs) {
         // By default, expect the orgId to be passed in as a path parameter
@@ -126,62 +126,25 @@ function createRequireOrgMemberMiddleware(
             ? args.orgIdExtractor
             : (req: Request) => req.params.orgId
         const minimumRequiredRole = args?.minimumRequiredRole
-        const validRole = isValidRole(minimumRequiredRole)
-
-        if (!validRole) {
-            console.error(
-                "Unknown role ",
-                minimumRequiredRole,
-                ". " +
-                "Role must be one of [UserRole.Owner, UserRole.Admin, UserRole.Member] or undefined. " +
-                "Requests will be rejected to be safe.",
-            )
-        }
 
         return function(req: Request, res: Response, next: NextFunction) {
+
             // First we call into requireUser to validate the token and set the user
-            return requireUser(req, res, () => {
-                if (!req.user) {
-                    return handleUnauthorizedExceptionWithRequiredCredentials(
-                        new UnauthorizedException("No user credentials found for requireOrgMember"),
-                        debugMode,
-                        res,
-                    )
+            return requireUser(req, res, async () => {
+                try {
+                    req.org = await verifyOrgMembership(req, res, debugMode, orgIdExtractorWithDefault, minimumRequiredRole)
+                    next()
+                } catch (e) {
+                    if (e instanceof UnauthorizedException) {
+                        handleUnauthorizedException({ exception: e, requireCredentials: true, debugMode, res, next })
+                    } else if (e instanceof UnexpectedException) {
+                        handleUnexpectedException({exception: e, debugMode, res})
+                    } else if (e instanceof ForbiddenException) {
+                        handleForbiddenExceptionWithRequiredCredentials(e, debugMode, res)
+                    } else {
+                        throw e
+                    }
                 }
-
-                // Make sure the user is a member of the required org
-                const requiredOrgId = orgIdExtractorWithDefault(req)
-                const orgIdToOrgMemberInfo = req.user.orgIdToOrgMemberInfo
-                if (!orgIdToOrgMemberInfo || !orgIdToOrgMemberInfo.hasOwnProperty(requiredOrgId)) {
-                    return handleForbiddenExceptionWithRequiredCredentials(
-                        new ForbiddenException(`User is not a member of org ${requiredOrgId}`),
-                        debugMode,
-                        res,
-                    )
-                }
-
-                // If minimumRequiredRole is specified, make sure the user is at least that role
-                let orgMemberInfo = orgIdToOrgMemberInfo[requiredOrgId]
-                if (!validRole) {
-                    return handleUnexpectedException({
-                        exception: new UnexpectedException(
-                            `Configuration error. Minimum required role (${minimumRequiredRole}) is invalid.`,
-                        ),
-                        debugMode,
-                        res,
-                    })
-                } else if (minimumRequiredRole !== undefined && orgMemberInfo.userRole < minimumRequiredRole) {
-                    return handleForbiddenExceptionWithRequiredCredentials(
-                        new ForbiddenException(
-                            `User's role ${orgMemberInfo.userRole} doesn't meet minimum required role`,
-                        ),
-                        debugMode,
-                        res,
-                    )
-                }
-
-                req.org = orgMemberInfo
-                next()
             })
         }
     }
@@ -216,6 +179,56 @@ async function verifyToken(bearerToken: string, tokenVerificationMetadata: Token
             throw new UnauthorizedException("Unable to decode jwt")
         }
     }
+}
+
+async function verifyOrgMembership(req: Request,
+                                   res: Response,
+                                   debugMode: boolean,
+                                   orgIdExtractorWithDefault: (req: Request) => string,
+                                   minimumRequiredRole: string | undefined) {
+    if (!req.user) {
+        throw new UnauthorizedException("No user credentials found for requireOrgMember")
+    }
+
+    // Make sure the user is a member of the required org
+    const requiredOrgId = orgIdExtractorWithDefault(req)
+    const orgIdToOrgMemberInfo = req.user.orgIdToOrgMemberInfo
+    if (!orgIdToOrgMemberInfo || !orgIdToOrgMemberInfo.hasOwnProperty(requiredOrgId)) {
+        throw new ForbiddenException(`User is not a member of org ${requiredOrgId}`)
+    }
+
+    // If minimumRequiredRole is specified, make sure the user is at least that role
+    const orgMemberInfo = orgIdToOrgMemberInfo[requiredOrgId]
+    if (minimumRequiredRole !== undefined) {
+        if (!req.roleNameToIndex) {
+            throw new UnexpectedException("Configuration error: No roles found")
+        }
+
+        const validMinimumRequiredRole = req.roleNameToIndex.hasOwnProperty(minimumRequiredRole)
+        if (!validMinimumRequiredRole) {
+            throw new UnexpectedException(
+                `Configuration error: Minimum required role (${minimumRequiredRole}) is invalid.`,
+            )
+        }
+
+        const validSpecifiedRole = req.roleNameToIndex.hasOwnProperty(orgMemberInfo.userRoleName)
+        if (!validSpecifiedRole) {
+            throw new UnexpectedException(
+                `Invalid user role (${minimumRequiredRole}). Try restarting the server to get the latest role config`,
+            )
+        }
+
+        const minimumRequiredRoleIndex = req.roleNameToIndex[minimumRequiredRole]
+        const userRoleIndex = req.roleNameToIndex[orgMemberInfo.userRoleName]
+        // If the minimum required role is before the user role in the list, error out
+        if (minimumRequiredRoleIndex < userRoleIndex) {
+            throw new ForbiddenException(
+                `User's role ${orgMemberInfo.userRoleName} doesn't meet minimum required role`,
+            )
+        }
+    }
+
+    return orgMemberInfo
 }
 
 // With an unexpected exception, we will always reject the request
@@ -280,10 +293,6 @@ async function getTokenVerificationMetadata(
     return tokenVerificationMetadata
 }
 
-function isValidRole(role: UserRole | undefined) {
-    return role === undefined || role === UserRole.Owner || role === UserRole.Admin || role === UserRole.Member
-}
-
 interface CreateRequestHandlerArgs {
     requireCredentials: boolean
     debugMode: boolean
@@ -305,6 +314,6 @@ interface HandleUnexpectedExceptionArgs {
 }
 
 export interface RequireOrgMemberArgs {
-    minimumRequiredRole?: UserRole
+    minimumRequiredRole?: string
     orgIdExtractor?: (req: Request) => string
 }

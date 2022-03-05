@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken"
 import nock from "nock"
 import { v4 as uuid } from "uuid"
 import { initAuth, User } from "../src"
-import { InternalOrgMemberInfo, InternalUser, toUser, UserRole } from "../src/user"
+import { InternalOrgMemberInfo, InternalUser, toUser } from "../src/user"
 import { TokenVerificationMetadata } from "../src/api"
 
 const AUTH_URL = "https://auth.example.com"
@@ -63,6 +63,11 @@ test("when manualTokenVerificationMetadata is specified, no fetch is made", asyn
     const tokenVerificationMetadata: TokenVerificationMetadata = {
         issuer: AUTH_URL,
         verifierKey: publicKey,
+        roleNameToIndex: {
+            "Owner": 0,
+            "Admin": 1,
+            "Member": 2,
+        }
     };
     const { requireUser } = initAuth({
         authUrl: AUTH_URL + "/",
@@ -282,17 +287,17 @@ test("toUser converts correctly with orgs", async () => {
             "99ee1329-e536-4aeb-8e2b-9f56c1b8fe8a": {
                 orgId: "99ee1329-e536-4aeb-8e2b-9f56c1b8fe8a",
                 orgName: "orgA",
-                userRole: UserRole.Owner,
+                userRoleName: "Owner",
             },
             "4ca20d17-5021-4d62-8b3d-148214fa8d6d": {
                 orgId: "4ca20d17-5021-4d62-8b3d-148214fa8d6d",
                 orgName: "orgB",
-                userRole: UserRole.Admin,
+                userRoleName: "Admin",
             },
             "15a31d0c-d284-4e7b-80a2-afb23f939cc3": {
                 orgId: "15a31d0c-d284-4e7b-80a2-afb23f939cc3",
                 orgName: "orgC",
-                userRole: UserRole.Member,
+                userRoleName: "Member",
             },
         },
     }
@@ -358,6 +363,32 @@ test("requireOrgMember fails for valid access token but unknown org", async () =
     expect(next).not.toHaveBeenCalled()
 })
 
+test("requireOrgMember fails for invalid role", async () => {
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireOrgMember } = initAuth({ authUrl: AUTH_URL, apiKey })
+
+    const orgMemberInfo = randomOrg()
+    const internalUser: InternalUser = {
+        user_id: uuid(),
+        org_id_to_org_member_info: {
+            [orgMemberInfo.org_id]: orgMemberInfo,
+        },
+    }
+    const accessToken = createAccessToken({ internalUser, privateKey })
+
+    const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
+    const { res, sendFn } = createResExpectingStatusCode(503)
+    const next = jest.fn()
+
+    const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
+    const requireOrgMemberMiddleware = requireOrgMember({ orgIdExtractor, minimumRequiredRole: "fake" })
+    await requireOrgMemberMiddleware(req, res, next)
+
+    expect(req.org).toBeUndefined()
+    expect(sendFn).toBeCalledTimes(1)
+    expect(next).not.toHaveBeenCalled()
+})
+
 test("requireOrgMember fails for invalid access token", async () => {
     const { apiKey } = await setupTokenVerificationMetadataEndpoint()
     const { requireOrgMember } = initAuth({ authUrl: AUTH_URL, apiKey })
@@ -394,8 +425,8 @@ test("requireOrgMember works with minimumRequiredRole", async () => {
     const user = toUser(internalUser)
     const accessToken = createAccessToken({ internalUser, privateKey })
 
-    const rolesThatShouldSucceed = new Set([UserRole.Admin, UserRole.Member])
-    for (let role of [UserRole.Owner, UserRole.Admin, UserRole.Member]) {
+    const rolesThatShouldSucceed = new Set(["Admin", "Member"])
+    for (let role of ["Owner", "Admin", "Member"]) {
         const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
         const { res, sendFn } = createResExpectingStatusCode(403)
         const next = jest.fn()
@@ -458,6 +489,11 @@ async function setupTokenVerificationMetadataEndpoint() {
             200,
             JSON.stringify({
                 verifier_key_pem: publicKey,
+                roles: [
+                    {"name": "Owner"},
+                    {"name": "Admin"},
+                    {"name": "Member"},
+                ]
             })
         )
 
