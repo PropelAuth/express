@@ -2,6 +2,11 @@ export type User = {
     userId: string
     orgIdToOrgMemberInfo?: OrgIdToOrgMemberInfo
 }
+export type Org = {
+    orgId: string,
+    name: string,
+}
+
 export type UserMetadata = {
     userId: string
 
@@ -16,6 +21,11 @@ export type UserMetadata = {
     locked: boolean,
     enabled: boolean,
     mfaEnabled: boolean,
+
+    createdAt: number,
+    lastActiveAt: number,
+
+    orgIdToOrgInfo?: OrgIdToOrgMemberInfo
 }
 
 export enum UserRole {
@@ -75,6 +85,6 @@ export function toOrgIdToOrgMemberInfo(snake_case?: {
     return camelCase
 }
 
-function toUserRole(userRole: string): UserRole {
+export function toUserRole(userRole: string): UserRole {
     return UserRole[userRole as keyof typeof UserRole]
 }

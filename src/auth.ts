@@ -1,14 +1,16 @@
 import { NextFunction, Request, Response } from "express"
 import jwt, { VerifyOptions } from "jsonwebtoken"
 import {
-    fetchBatchUserMetadata,
+    createUser,
+    CreateUserRequest,
+    fetchBatchUserMetadata, fetchOrg, fetchOrgByQuery,
     fetchTokenVerificationMetadata,
-    fetchUserMetadataByQuery,
-    TokenVerificationMetadata,
+    fetchUserMetadataByQuery, fetchUsersByQuery, fetchUsersInOrg, OrgQuery, OrgQueryResponse,
+    TokenVerificationMetadata, UsersInOrgQuery, UsersPagedResponse, UsersQuery,
 } from "./api"
 import UnauthorizedException from "./UnauthorizedException"
 import UnexpectedException from "./UnexpectedException"
-import { InternalUser, toUser, UserMetadata, UserRole } from "./user"
+import {InternalUser, Org, toUser, User, UserMetadata, UserRole} from "./user"
 import { validateAuthUrl } from "./validators"
 import ForbiddenException from "./ForbiddenException"
 
@@ -55,28 +57,48 @@ export function initAuth(opts: AuthOptions) {
     const requireOrgMember = createRequireOrgMemberMiddleware(debugMode, requireUser)
 
     // Utility functions
-    function fetchUserMetadataByUserId(userId: string): Promise<UserMetadata | null> {
-        return fetchUserMetadataByQuery(authUrl, apiKey, { user_id: userId })
+    function fetchUserMetadataByUserId(userId: string, includeOrgs?: boolean): Promise<UserMetadata | null> {
+        return fetchUserMetadataByQuery(authUrl, apiKey, userId, { include_orgs: includeOrgs || false })
     }
 
-    function fetchUserMetadataByEmail(email: string): Promise<UserMetadata | null> {
-        return fetchUserMetadataByQuery(authUrl, apiKey, { email: email })
+    function fetchUserMetadataByEmail(email: string, includeOrgs?: boolean): Promise<UserMetadata | null> {
+        return fetchUserMetadataByQuery(authUrl, apiKey, "email", { email: email, include_orgs: includeOrgs || false })
     }
 
-    function fetchUserMetadataByUsername(username: string): Promise<UserMetadata | null> {
-        return fetchUserMetadataByQuery(authUrl, apiKey, { username: username })
+    function fetchUserMetadataByUsername(username: string, includeOrgs?: boolean): Promise<UserMetadata | null> {
+        return fetchUserMetadataByQuery(authUrl, apiKey, "username", { username: username, include_orgs: includeOrgs || false })
     }
 
-    function fetchBatchUserMetadataByUserIds(userIds: string[]): Promise<{ [userId: string]: UserMetadata }> {
-        return fetchBatchUserMetadata(authUrl, apiKey, "user_id", userIds)
+    function fetchBatchUserMetadataByUserIds(userIds: string[], includeOrgs?: boolean): Promise<{ [userId: string]: UserMetadata }> {
+        return fetchBatchUserMetadata(authUrl, apiKey, "user_ids", userIds, (x) => x.userId, includeOrgs || false)
     }
 
-    function fetchBatchUserMetadataByEmails(emails: string[]): Promise<{ [email: string]: UserMetadata }> {
-        return fetchBatchUserMetadata(authUrl, apiKey, "email", emails)
+    function fetchBatchUserMetadataByEmails(emails: string[], includeOrgs?: boolean): Promise<{ [email: string]: UserMetadata }> {
+        return fetchBatchUserMetadata(authUrl, apiKey, "emails", emails, (x) => x.email, includeOrgs || false)
     }
 
-    function fetchBatchUserMetadataByUsernames(usernames: string[]): Promise<{ [username: string]: UserMetadata }> {
-        return fetchBatchUserMetadata(authUrl, apiKey, "username", usernames)
+    function fetchBatchUserMetadataByUsernames(usernames: string[], includeOrgs?: boolean): Promise<{ [username: string]: UserMetadata }> {
+        return fetchBatchUserMetadata(authUrl, apiKey, "usernames", usernames, (x) => x.username || "", includeOrgs || false)
+    }
+
+    function fetchOrgWrapper(orgId: string): Promise<Org | null> {
+        return fetchOrg(authUrl, apiKey, orgId)
+    }
+
+    function fetchOrgsByQueryWrapper(orgQuery: OrgQuery): Promise<OrgQueryResponse> {
+        return fetchOrgByQuery(authUrl, apiKey, orgQuery)
+    }
+
+    function fetchUsersByQueryWrapper(usersQuery: UsersQuery): Promise<UsersPagedResponse> {
+        return fetchUsersByQuery(authUrl, apiKey, usersQuery)
+    }
+
+    function fetchUsersInOrgWrapper(usersInOrgQuery: UsersInOrgQuery): Promise<UsersPagedResponse> {
+        return fetchUsersInOrg(authUrl, apiKey, usersInOrgQuery)
+    }
+
+    function createUserWrapper(createUserRequest: CreateUserRequest): Promise<User> {
+        return createUser(authUrl, apiKey, createUserRequest)
     }
 
     return {
@@ -89,6 +111,11 @@ export function initAuth(opts: AuthOptions) {
         fetchBatchUserMetadataByUserIds,
         fetchBatchUserMetadataByEmails,
         fetchBatchUserMetadataByUsernames,
+        fetchOrg: fetchOrgWrapper,
+        fetchOrgByQuery: fetchOrgsByQueryWrapper,
+        fetchUsersByQuery: fetchUsersByQueryWrapper,
+        fetchUsersInOrg: fetchUsersInOrgWrapper,
+        createUser: createUserWrapper,
         UserRole,
     }
 }
