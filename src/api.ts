@@ -1,6 +1,8 @@
 import {httpRequest} from "./http"
 import {Org, toUserRole, User, UserMetadata} from "./user"
 import CreateUserException from "./CreateUserException";
+import UpdateUserMetadataException from "./UpdateUserMetadataException";
+import UpdateUserEmailException from "./UpdateUserEmailException";
 
 export type TokenVerificationMetadata = {
     verifierKey: string
@@ -27,6 +29,14 @@ export function fetchTokenVerificationMetadata(authUrl: URL,
             issuer: formatIssuer(authUrl),
         }
     })
+}
+
+export function fetchUserMetadataByUserIdWithIdCheck(authUrl: URL, apiKey: string, userId: string, includeOrgs?: boolean): Promise<UserMetadata | null> {
+    if (isValidId(userId)) {
+        return fetchUserMetadataByQuery(authUrl, apiKey, userId, {include_orgs: includeOrgs || false})
+    } else {
+        return Promise.resolve(null);
+    }
 }
 
 export function fetchUserMetadataByQuery(authUrl: URL, apiKey: string, pathParam: string, query: any): Promise<UserMetadata | null> {
@@ -76,6 +86,10 @@ export function fetchBatchUserMetadata(
 }
 
 export function fetchOrg(authUrl: URL, apiKey: string, orgId: string): Promise<Org | null> {
+    if (!isValidId(orgId)) {
+        return Promise.resolve(null);
+    }
+
     return httpRequest(authUrl, apiKey, `/api/backend/v1/org/${orgId}`, "GET").then((httpResponse) => {
         if (httpResponse.statusCode === 401) {
             throw new Error("apiKey is incorrect")
@@ -115,7 +129,7 @@ export function fetchOrgByQuery(authUrl: URL, apiKey: string, query: OrgQuery): 
         page_number: query.pageNumber,
         order_by: query.orderBy,
     }
-    return httpRequest(authUrl, apiKey, `/api/backend/v1/org/query`, "POST", JSON.stringify(request))
+    return httpRequest(authUrl, apiKey, `/api/backend/v1/org/query`, "GET", JSON.stringify(request))
         .then((httpResponse) => {
             if (httpResponse.statusCode === 401) {
                 throw new Error("apiKey is incorrect")
@@ -192,6 +206,17 @@ export type UsersInOrgQuery = {
 }
 
 export function fetchUsersInOrg(authUrl: URL, apiKey: string, query: UsersInOrgQuery): Promise<UsersPagedResponse> {
+    if (!isValidId(query.orgId)) {
+        const emptyResponse: UsersPagedResponse = {
+            users: [],
+            totalUsers: 0,
+            currentPage: query.pageNumber || 0,
+            pageSize: query.pageSize || 10,
+            hasMoreResults: false
+        }
+        return Promise.resolve(emptyResponse)
+    }
+
     const queryParams = {
         page_size: query.pageSize,
         page_number: query.pageNumber,
@@ -254,7 +279,73 @@ export function createUser(authUrl: URL, apiKey: string, createUserRequest: Crea
                 }
             })
         })
+}
 
+export type UpdateUserMetadataRequest = {
+    username?: string,
+    firstName?: string,
+    lastName?: string,
+}
+
+export function updateUserMetadata(authUrl: URL, apiKey: string, userId: string, updateUserMetadataRequest: UpdateUserMetadataRequest): Promise<boolean> {
+    if (!isValidId(userId)) {
+        return Promise.resolve(false)
+    }
+
+    const request = {
+        username: updateUserMetadataRequest.username,
+        first_name: updateUserMetadataRequest.firstName,
+        last_name: updateUserMetadataRequest.lastName,
+    }
+    return httpRequest(authUrl, apiKey, `/api/backend/v1/user/${userId}`, "PUT", JSON.stringify(request))
+        .then((httpResponse) => {
+            if (httpResponse.statusCode === 401) {
+                throw new Error("apiKey is incorrect")
+            } else if (httpResponse.statusCode === 400) {
+                throw new UpdateUserMetadataException(httpResponse.response)
+            } else if (httpResponse.statusCode === 404) {
+                return false
+            } else if (httpResponse.statusCode && httpResponse.statusCode >= 400) {
+                throw new Error("Unknown error when creating user")
+            }
+
+            return true
+        })
+}
+
+export type UpdateUserEmailRequest = {
+    newEmail: string,
+    requireEmailConfirmation: boolean,
+}
+
+export function updateUserEmail(authUrl: URL, apiKey: string, userId: string, updateUserEmail: UpdateUserEmailRequest): Promise<boolean> {
+    if (!isValidId(userId)) {
+        return Promise.resolve(false)
+    }
+
+    const request = {
+        new_email: updateUserEmail.newEmail,
+        require_email_confirmation: updateUserEmail.requireEmailConfirmation,
+    }
+    return httpRequest(authUrl, apiKey, `/api/backend/v1/user/${userId}/email`, "PUT", JSON.stringify(request))
+        .then((httpResponse) => {
+            if (httpResponse.statusCode === 401) {
+                throw new Error("apiKey is incorrect")
+            } else if (httpResponse.statusCode === 400) {
+                throw new UpdateUserEmailException(httpResponse.response)
+            } else if (httpResponse.statusCode === 404) {
+                return false
+            } else if (httpResponse.statusCode && httpResponse.statusCode >= 400) {
+                throw new Error("Unknown error when creating user")
+            }
+
+            return true
+        })
+}
+
+const idRegex = /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/i;
+function isValidId(id: string): boolean {
+    return idRegex.test(id)
 }
 
 function formatQueryParameters(obj: {[key: string]: any}): string {

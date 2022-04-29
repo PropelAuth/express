@@ -3,10 +3,20 @@ import jwt, { VerifyOptions } from "jsonwebtoken"
 import {
     createUser,
     CreateUserRequest,
-    fetchBatchUserMetadata, fetchOrg, fetchOrgByQuery,
+    fetchBatchUserMetadata,
+    fetchOrg,
+    fetchOrgByQuery,
     fetchTokenVerificationMetadata,
-    fetchUserMetadataByQuery, fetchUsersByQuery, fetchUsersInOrg, OrgQuery, OrgQueryResponse,
-    TokenVerificationMetadata, UsersInOrgQuery, UsersPagedResponse, UsersQuery,
+    fetchUserMetadataByQuery,
+    fetchUserMetadataByUserIdWithIdCheck,
+    fetchUsersByQuery,
+    fetchUsersInOrg,
+    OrgQuery,
+    OrgQueryResponse,
+    TokenVerificationMetadata, updateUserEmail, UpdateUserEmailRequest, updateUserMetadata, UpdateUserMetadataRequest,
+    UsersInOrgQuery,
+    UsersPagedResponse,
+    UsersQuery,
 } from "./api"
 import UnauthorizedException from "./UnauthorizedException"
 import UnexpectedException from "./UnexpectedException"
@@ -58,7 +68,7 @@ export function initAuth(opts: AuthOptions) {
 
     // Utility functions
     function fetchUserMetadataByUserId(userId: string, includeOrgs?: boolean): Promise<UserMetadata | null> {
-        return fetchUserMetadataByQuery(authUrl, apiKey, userId, { include_orgs: includeOrgs || false })
+        return fetchUserMetadataByUserIdWithIdCheck(authUrl, apiKey, userId, includeOrgs);
     }
 
     function fetchUserMetadataByEmail(email: string, includeOrgs?: boolean): Promise<UserMetadata | null> {
@@ -101,6 +111,14 @@ export function initAuth(opts: AuthOptions) {
         return createUser(authUrl, apiKey, createUserRequest)
     }
 
+    function updateUserMetadataWrapper(userId: string, updateUserMetadataRequest: UpdateUserMetadataRequest): Promise<boolean> {
+        return updateUserMetadata(authUrl, apiKey, userId, updateUserMetadataRequest)
+    }
+
+    function updateUserEmailWrapper(userId: string, updateUserEmailRequest: UpdateUserEmailRequest): Promise<boolean> {
+        return updateUserEmail(authUrl, apiKey, userId, updateUserEmailRequest)
+    }
+
     return {
         requireUser,
         optionalUser,
@@ -116,6 +134,8 @@ export function initAuth(opts: AuthOptions) {
         fetchUsersByQuery: fetchUsersByQueryWrapper,
         fetchUsersInOrg: fetchUsersInOrgWrapper,
         createUser: createUserWrapper,
+        updateUserMetadata: updateUserMetadataWrapper,
+        updateUserEmail: updateUserEmailWrapper,
         UserRole,
     }
 }
