@@ -3,6 +3,7 @@ import {Org, toUserRole, User, UserMetadata} from "./user"
 import CreateUserException from "./CreateUserException";
 import UpdateUserMetadataException from "./UpdateUserMetadataException";
 import UpdateUserEmailException from "./UpdateUserEmailException";
+import MagicLinkCreationException from "./MagicLinkCreationException";
 
 export type TokenVerificationMetadata = {
     verifierKey: string
@@ -340,6 +341,38 @@ export function updateUserEmail(authUrl: URL, apiKey: string, userId: string, up
             }
 
             return true
+        })
+}
+
+export type CreateMagicLinkRequest = {
+    email: string,
+    redirectToUrl?: string,
+    expiresInHours?: string,
+    createNewUserIfOneDoesntExist?: boolean,
+}
+
+export type MagicLink = {
+    url: string
+}
+
+export function createMagicLink(authUrl: URL, apiKey: string, createMagicLinkRequest: CreateMagicLinkRequest): Promise<MagicLink> {
+    const request = {
+        email: createMagicLinkRequest.email,
+        redirect_to_url: createMagicLinkRequest.redirectToUrl,
+        expires_in_hours: createMagicLinkRequest.expiresInHours,
+        create_new_user_if_one_doesnt_exist: createMagicLinkRequest.createNewUserIfOneDoesntExist,
+    }
+    return httpRequest(authUrl, apiKey, `/api/backend/v1/magic_link`, "POST", JSON.stringify(request))
+        .then((httpResponse) => {
+            if (httpResponse.statusCode === 401) {
+                throw new Error("apiKey is incorrect")
+            } else if (httpResponse.statusCode === 400) {
+                throw new MagicLinkCreationException(httpResponse.response)
+            } else if (httpResponse.statusCode && httpResponse.statusCode >= 400) {
+                throw new Error("Unknown error when creating magic link")
+            }
+
+            return JSON.parse(httpResponse.response)
         })
 }
 

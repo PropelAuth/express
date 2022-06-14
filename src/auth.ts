@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express"
 import jwt, { VerifyOptions } from "jsonwebtoken"
 import {
+    createMagicLink, CreateMagicLinkRequest,
     createUser,
     CreateUserRequest,
     fetchBatchUserMetadata,
@@ -10,7 +11,7 @@ import {
     fetchUserMetadataByQuery,
     fetchUserMetadataByUserIdWithIdCheck,
     fetchUsersByQuery,
-    fetchUsersInOrg,
+    fetchUsersInOrg, MagicLink,
     OrgQuery,
     OrgQueryResponse,
     TokenVerificationMetadata, updateUserEmail, UpdateUserEmailRequest, updateUserMetadata, UpdateUserMetadataRequest,
@@ -119,6 +120,10 @@ export function initAuth(opts: AuthOptions) {
         return updateUserEmail(authUrl, apiKey, userId, updateUserEmailRequest)
     }
 
+    function createMagicLinkWrapper(createMagicLinkRequest: CreateMagicLinkRequest): Promise<MagicLink> {
+        return createMagicLink(authUrl, apiKey, createMagicLinkRequest)
+    }
+
     return {
         requireUser,
         optionalUser,
@@ -136,6 +141,7 @@ export function initAuth(opts: AuthOptions) {
         createUser: createUserWrapper,
         updateUserMetadata: updateUserMetadataWrapper,
         updateUserEmail: updateUserEmailWrapper,
+        createMagicLink: createMagicLinkWrapper,
         UserRole,
     }
 }
