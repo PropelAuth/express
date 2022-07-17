@@ -12,7 +12,7 @@ An Express/Connect middleware for managing authentication, backed by [PropelAuth
 
 ## Documentation
 
-- Full reference this library is [here](https://docs.propelauth.com/reference/frontend-apis/react.html)
+- Full reference this library is [here](https://docs.propelauth.com/reference/backend-apis/express/)
 - Getting started guides for PropelAuth are [here](https://docs.propelauth.com/)
 
 ## Questions?
