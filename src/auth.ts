@@ -39,6 +39,9 @@ export function initAuth(opts: BaseAuthOptions) {
         updateUserMetadata: auth.updateUserMetadata,
         updateUserEmail: auth.updateUserEmail,
         createMagicLink: auth.createMagicLink,
+        migrateUserFromExternalSource: auth.migrateUserFromExternalSource,
+        createOrg: auth.createOrg,
+        addUserToOrg: auth.addUserToOrg,
         UserRole: auth.UserRole,
     }
 }
