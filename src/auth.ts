@@ -6,6 +6,17 @@ import {
     UnauthorizedException,
     UnexpectedException, UserAndOrgMemberInfo, UserRole, User
 } from "@propelauth/node";
+import {Org, UserMetadata} from "@propelauth/node/dist/user";
+import {
+    AddUserToOrgRequest,
+    CreateMagicLinkRequest, CreateOrgRequest,
+    CreateUserRequest, MagicLink, MigrateUserFromExternalSourceRequest,
+    OrgQuery,
+    OrgQueryResponse, UpdateUserEmailRequest, UpdateUserMetadataRequest,
+    UsersInOrgQuery,
+    UsersPagedResponse,
+    UsersQuery
+} from "@propelauth/node/dist/api";
 
 export function initAuth(opts: BaseAuthOptions) {
     const auth = initBaseAuth(opts)
@@ -42,6 +53,11 @@ export function initAuth(opts: BaseAuthOptions) {
         migrateUserFromExternalSource: auth.migrateUserFromExternalSource,
         createOrg: auth.createOrg,
         addUserToOrg: auth.addUserToOrg,
+        deleteUser: auth.deleteUser,
+        disableUser: auth.disableUser,
+        enableUser: auth.enableUser,
+        allowOrgToSetupSamlConnection: auth.allowOrgToSetupSamlConnection,
+        disallowOrgToSetupSamlConnection: auth.disallowOrgToSetupSamlConnection,
         UserRole: auth.UserRole,
     }
 }
