@@ -4,7 +4,7 @@ import nock from "nock"
 import {v4 as uuid} from "uuid"
 import {initAuth} from "../src"
 import jwt from "jsonwebtoken"
-import {InternalOrgMemberInfo, InternalUser, TokenVerificationMetadata, toUser, UserRole} from "@propelauth/node";
+import {InternalOrgMemberInfo, InternalUser, TokenVerificationMetadata, toUser} from "@propelauth/node";
 
 const AUTH_URL = "https://auth.example.com"
 const ALGO = "RS256"
@@ -321,16 +321,18 @@ test("requireOrgMember fails for invalid access token", async () => {
     expect(next).not.toHaveBeenCalled()
 })
 
-test("requireOrgMember works with minimumRequiredRole", async () => {
+test("requireOrgMemberWithMinimumRequiredRole works with minimumRequiredRole", async () => {
     const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireOrgMember} = initAuth({authUrl: AUTH_URL, apiKey})
+    const {requireOrgMemberWithMinimumRole} = initAuth({authUrl: AUTH_URL, apiKey})
 
     const {orgName, urlSafeOrgName} = randomOrgName()
-    const orgMemberInfo = {
+    const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
+        user_permissions: [],
+        inherited_user_roles_plus_current_role: ["Admin", "Member"]
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
@@ -341,14 +343,14 @@ test("requireOrgMember works with minimumRequiredRole", async () => {
     const user = toUser(internalUser)
     const accessToken = createAccessToken({internalUser, privateKey})
 
-    const rolesThatShouldSucceed = new Set([UserRole.Admin, UserRole.Member])
-    for (let role of [UserRole.Owner, UserRole.Admin, UserRole.Member]) {
+    const rolesThatShouldSucceed = new Set(["Admin", "Member"])
+    for (let role of ["Owner", "Admin", "Member"]) {
         const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
         const {res, sendFn} = createResExpectingStatusCode(403)
         const next = jest.fn()
 
         const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
-        const requireOrgMemberMiddleware = requireOrgMember({orgIdExtractor, minimumRequiredRole: role})
+        const requireOrgMemberMiddleware = requireOrgMemberWithMinimumRole({orgIdExtractor, minimumRequiredRole: role})
         await requireOrgMemberMiddleware(req, res, next)
 
         if (rolesThatShouldSucceed.has(role)) {
@@ -363,9 +365,9 @@ test("requireOrgMember works with minimumRequiredRole", async () => {
     }
 })
 
-test("requireOrgMember fails with invalid minimumRequiredRole", async () => {
+test("requireOrgMemberWithMinimumRole fails with invalid minimumRequiredRole", async () => {
     const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireOrgMember} = initAuth({authUrl: AUTH_URL, apiKey})
+    const {requireOrgMemberWithMinimumRole} = initAuth({authUrl: AUTH_URL, apiKey})
 
     const {orgName, urlSafeOrgName} = randomOrgName()
     const orgMemberInfo = {
@@ -373,6 +375,8 @@ test("requireOrgMember fails with invalid minimumRequiredRole", async () => {
         org_name: orgName,
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
+        user_permissions: [],
+        inherited_user_roles_plus_current_role: ["Admin", "Member"]
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
@@ -383,17 +387,160 @@ test("requireOrgMember fails with invalid minimumRequiredRole", async () => {
     const accessToken = createAccessToken({internalUser, privateKey})
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-    const {res, sendFn} = createResExpectingStatusCode(503)
+    const {res, sendFn} = createResExpectingStatusCode(403)
     const next = jest.fn()
 
     const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
-    // @ts-ignore
-    const requireOrgMemberMiddleware = requireOrgMember({orgIdExtractor, minimumRequiredRole: "js problems"})
+    const requireOrgMemberMiddleware = requireOrgMemberWithMinimumRole({
+        orgIdExtractor,
+        minimumRequiredRole: "js problems"
+    })
     await requireOrgMemberMiddleware(req, res, next)
 
     expect(req.org).toBeUndefined()
     expect(sendFn).toBeCalledTimes(1)
     expect(next).not.toHaveBeenCalled()
+})
+
+test("requireOrgMemberWithExactRole works with an exact role match", async () => {
+    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
+    const {requireOrgMemberWithExactRole} = initAuth({authUrl: AUTH_URL, apiKey})
+
+    const {orgName, urlSafeOrgName} = randomOrgName()
+    const orgMemberInfo: InternalOrgMemberInfo = {
+        org_id: uuid(),
+        org_name: orgName,
+        url_safe_org_name: urlSafeOrgName,
+        user_role: "Admin",
+        user_permissions: [],
+        inherited_user_roles_plus_current_role: ["Admin", "Member"]
+    }
+    const internalUser: InternalUser = {
+        user_id: uuid(),
+        org_id_to_org_member_info: {
+            [orgMemberInfo.org_id]: orgMemberInfo,
+        },
+    }
+    const user = toUser(internalUser)
+    const accessToken = createAccessToken({internalUser, privateKey})
+
+    const rolesThatShouldSucceed = new Set(["Admin"])
+    for (let role of ["Owner", "Admin", "Member", "other"]) {
+        const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
+        const {res, sendFn} = createResExpectingStatusCode(403)
+        const next = jest.fn()
+
+        const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
+        const requireOrgMemberMiddleware = requireOrgMemberWithExactRole({orgIdExtractor, role: role})
+        await requireOrgMemberMiddleware(req, res, next)
+
+        if (rolesThatShouldSucceed.has(role)) {
+            expect(req.user).toEqual(user)
+            expect(req.org).toEqual(user.orgIdToOrgMemberInfo && user.orgIdToOrgMemberInfo[orgMemberInfo.org_id])
+            expect(next).toBeCalledTimes(1)
+        } else {
+            expect(req.org).toBeUndefined()
+            expect(sendFn).toBeCalledTimes(1)
+            expect(next).not.toHaveBeenCalled()
+        }
+    }
+})
+
+test("requireOrgMemberWithPermission works with a permissions match", async () => {
+    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
+    const {requireOrgMemberWithPermission} = initAuth({authUrl: AUTH_URL, apiKey})
+
+    const {orgName, urlSafeOrgName} = randomOrgName()
+    const orgMemberInfo: InternalOrgMemberInfo = {
+        org_id: uuid(),
+        org_name: orgName,
+        url_safe_org_name: urlSafeOrgName,
+        user_role: "Admin",
+        user_permissions: ["permA", "permB"],
+        inherited_user_roles_plus_current_role: ["Admin", "Member"]
+    }
+    const internalUser: InternalUser = {
+        user_id: uuid(),
+        org_id_to_org_member_info: {
+            [orgMemberInfo.org_id]: orgMemberInfo,
+        },
+    }
+    const user = toUser(internalUser)
+    const accessToken = createAccessToken({internalUser, privateKey})
+
+    const permissionsThatShouldSucceed = new Set(["permA", "permB"])
+    for (let permission of ["permA", "permB", "permC", "permD"]) {
+        const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
+        const {res, sendFn} = createResExpectingStatusCode(403)
+        const next = jest.fn()
+
+        const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
+        const requireOrgMemberMiddleware = requireOrgMemberWithPermission({orgIdExtractor, permission: permission})
+        await requireOrgMemberMiddleware(req, res, next)
+
+        if (permissionsThatShouldSucceed.has(permission)) {
+            expect(req.user).toEqual(user)
+            expect(req.org).toEqual(user.orgIdToOrgMemberInfo && user.orgIdToOrgMemberInfo[orgMemberInfo.org_id])
+            expect(next).toBeCalledTimes(1)
+        } else {
+            expect(req.org).toBeUndefined()
+            expect(sendFn).toBeCalledTimes(1)
+            expect(next).not.toHaveBeenCalled()
+        }
+    }
+})
+
+test("requireOrgMemberWithAllPermissions works with a full permissions match", async () => {
+    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
+    const {requireOrgMemberWithAllPermissions} = initAuth({authUrl: AUTH_URL, apiKey})
+
+    const {orgName, urlSafeOrgName} = randomOrgName()
+    const orgMemberInfo: InternalOrgMemberInfo = {
+        org_id: uuid(),
+        org_name: orgName,
+        url_safe_org_name: urlSafeOrgName,
+        user_role: "Admin",
+        user_permissions: ["permA", "permB"],
+        inherited_user_roles_plus_current_role: ["Admin", "Member"]
+    }
+    const internalUser: InternalUser = {
+        user_id: uuid(),
+        org_id_to_org_member_info: {
+            [orgMemberInfo.org_id]: orgMemberInfo,
+        },
+    }
+    const user = toUser(internalUser)
+    const accessToken = createAccessToken({internalUser, privateKey})
+
+    // Should succeed
+    for (let permissions of [["permA", "permB"], ["permA"], ["permB"], []]) {
+        const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
+        const {res, sendFn} = createResExpectingStatusCode(403)
+        const next = jest.fn()
+
+        const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
+        const requireOrgMemberMiddleware = requireOrgMemberWithAllPermissions({orgIdExtractor, permissions})
+        await requireOrgMemberMiddleware(req, res, next)
+
+        expect(req.user).toEqual(user)
+        expect(req.org).toEqual(user.orgIdToOrgMemberInfo && user.orgIdToOrgMemberInfo[orgMemberInfo.org_id])
+        expect(next).toBeCalledTimes(1)
+    }
+
+    // Should fail
+    for (let permissions of [["permA", "permB", "permC"], ["permC"], ["permB", "permC"]]) {
+        const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
+        const {res, sendFn} = createResExpectingStatusCode(403)
+        const next = jest.fn()
+
+        const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
+        const requireOrgMemberMiddleware = requireOrgMemberWithAllPermissions({orgIdExtractor, permissions})
+        await requireOrgMemberMiddleware(req, res, next)
+
+        expect(req.org).toBeUndefined()
+        expect(sendFn).toBeCalledTimes(1)
+        expect(next).not.toHaveBeenCalled()
+    }
 })
 
 async function setupTokenVerificationMetadataEndpoint() {
@@ -511,11 +658,14 @@ function randomOrgIdToOrgMemberInfo(): { [org_id: string]: InternalOrgMemberInfo
 
 function randomOrg(): InternalOrgMemberInfo {
     const {orgName, urlSafeOrgName} = randomOrgName()
+    const role = choose(["Owner", "Admin", "Member"])
     return {
         org_id: uuid(),
         org_name: orgName,
         url_safe_org_name: urlSafeOrgName,
-        user_role: choose(["Owner", "Admin", "Member"]),
+        user_role: role,
+        inherited_user_roles_plus_current_role: [role],
+        user_permissions: []
     }
 }
 

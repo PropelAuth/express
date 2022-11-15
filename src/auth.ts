@@ -4,19 +4,9 @@ import {
     initBaseAuth,
     RequriedOrgInfo,
     UnauthorizedException,
-    UnexpectedException, UserAndOrgMemberInfo, UserRole, User
+    UnexpectedException, UserAndOrgMemberInfo, User
 } from "@propelauth/node";
-import {Org, UserMetadata} from "@propelauth/node/dist/user";
-import {
-    AddUserToOrgRequest,
-    CreateMagicLinkRequest, CreateOrgRequest,
-    CreateUserRequest, MagicLink, MigrateUserFromExternalSourceRequest,
-    OrgQuery,
-    OrgQueryResponse, UpdateUserEmailRequest, UpdateUserMetadataRequest,
-    UsersInOrgQuery,
-    UsersPagedResponse,
-    UsersQuery
-} from "@propelauth/node/dist/api";
+import {RequiredOrgInfo} from "@propelauth/node/dist/auth";
 
 export function initAuth(opts: BaseAuthOptions) {
     const auth = initBaseAuth(opts)
@@ -31,11 +21,19 @@ export function initAuth(opts: BaseAuthOptions) {
         requireCredentials: false,
     })
     const requireOrgMember = createRequireOrgMemberMiddleware(auth.validateAccessTokenAndGetUserWithOrgInfo)
+    const requireOrgMemberWithMinimumRole = createRequireOrgMemberMiddlewareWithMinimumRole(auth.validateAccessTokenAndGetUserWithOrgInfoWithMinimumRole)
+    const requireOrgMemberWithExactRole = createRequireOrgMemberMiddlewareWithExactRole(auth.validateAccessTokenAndGetUserWithOrgInfoWithExactRole)
+    const requireOrgMemberWithPermission = createRequireOrgMemberMiddlewareWithPermission(auth.validateAccessTokenAndGetUserWithOrgInfoWithPermission)
+    const requireOrgMemberWithAllPermissions = createRequireOrgMemberMiddlewareWithAllPermissions(auth.validateAccessTokenAndGetUserWithOrgInfoWithAllPermissions)
 
     return {
         requireUser,
         optionalUser,
         requireOrgMember,
+        requireOrgMemberWithMinimumRole,
+        requireOrgMemberWithExactRole,
+        requireOrgMemberWithPermission,
+        requireOrgMemberWithAllPermissions,
         fetchUserMetadataByUserId: auth.fetchUserMetadataByUserId,
         fetchUserMetadataByEmail: auth.fetchUserMetadataByEmail,
         fetchUserMetadataByUsername: auth.fetchUserMetadataByUsername,
@@ -58,7 +56,6 @@ export function initAuth(opts: BaseAuthOptions) {
         enableUser: auth.enableUser,
         allowOrgToSetupSamlConnection: auth.allowOrgToSetupSamlConnection,
         disallowOrgToSetupSamlConnection: auth.disallowOrgToSetupSamlConnection,
-        UserRole: auth.UserRole,
     }
 }
 
@@ -84,37 +81,113 @@ function createUserExtractingMiddleware({
 
 function createRequireOrgMemberMiddleware(
     validateAccessTokenAndGetUserWithOrgInfo: (authorizationHeader: string | undefined,
-                                               requiredOrgInfo: RequriedOrgInfo,
-                                               minimumRequiredRole?: UserRole) => Promise<UserAndOrgMemberInfo>,
+                                               requiredOrgInfo: RequriedOrgInfo) => Promise<UserAndOrgMemberInfo>,
 ) {
     return function requireOrgMember(args?: RequireOrgMemberArgs) {
-        const orgIdExtractor = args?.orgIdExtractor;
-        const orgNameExtractor = args?.orgNameExtractor;
-        const minimumRequiredRole = args?.minimumRequiredRole
+        const orgIdExtractor = args ? args.orgIdExtractor : undefined
+        const orgNameExtractor = args ? args.orgNameExtractor : undefined
 
-        return async function (req: Request, res: Response, next: NextFunction) {
+        return requireOrgMemberGenericMiddleware((authorizationHeader, requiredOrgInfo) => {
+            return validateAccessTokenAndGetUserWithOrgInfo(authorizationHeader, requiredOrgInfo)
+        }, orgIdExtractor, orgNameExtractor)
+    }
+}
+
+function createRequireOrgMemberMiddlewareWithMinimumRole(
+    validateAccessTokenAndGetUserWithOrgInfoWithMinimumRole: (authorizationHeader: string | undefined,
+                                                              requiredOrgInfo: RequriedOrgInfo,
+                                                              minimumRole: string) => Promise<UserAndOrgMemberInfo>,
+) {
+    return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithMinimumRoleArgs) {
+        const orgIdExtractor = args ? args.orgIdExtractor : undefined
+        const orgNameExtractor = args ? args.orgNameExtractor : undefined
+
+        return requireOrgMemberGenericMiddleware((authorizationHeader, requiredOrgInfo) => {
+            return validateAccessTokenAndGetUserWithOrgInfoWithMinimumRole(authorizationHeader, requiredOrgInfo, args.minimumRequiredRole)
+        }, orgIdExtractor, orgNameExtractor)
+    }
+}
+
+function createRequireOrgMemberMiddlewareWithExactRole(
+    validateAccessTokenAndGetUserWithOrgInfoWithExactRole: (authorizationHeader: string | undefined,
+                                                            requiredOrgInfo: RequriedOrgInfo,
+                                                            role: string) => Promise<UserAndOrgMemberInfo>,
+) {
+    return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithExactRoleArgs) {
+        const orgIdExtractor = args ? args.orgIdExtractor : undefined
+        const orgNameExtractor = args ? args.orgNameExtractor : undefined
+
+        return requireOrgMemberGenericMiddleware((authorizationHeader, requiredOrgInfo) => {
+            return validateAccessTokenAndGetUserWithOrgInfoWithExactRole(authorizationHeader, requiredOrgInfo, args.role)
+        }, orgIdExtractor, orgNameExtractor)
+    }
+}
+
+function createRequireOrgMemberMiddlewareWithPermission(
+    validateAccessTokenAndGetUserWithOrgInfoWithPermission: (authorizationHeader: string | undefined,
+                                                             requiredOrgInfo: RequriedOrgInfo,
+                                                             permission: string) => Promise<UserAndOrgMemberInfo>,
+) {
+    return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithPermissionArgs) {
+        const orgIdExtractor = args ? args.orgIdExtractor : undefined
+        const orgNameExtractor = args ? args.orgNameExtractor : undefined
+
+        return requireOrgMemberGenericMiddleware((authorizationHeader, requiredOrgInfo) => {
+            return validateAccessTokenAndGetUserWithOrgInfoWithPermission(authorizationHeader, requiredOrgInfo, args.permission)
+        }, orgIdExtractor, orgNameExtractor)
+    }
+}
+
+function createRequireOrgMemberMiddlewareWithAllPermissions(
+    validateAccessTokenAndGetUserWithOrgInfoWithAllPermissions: (authorizationHeader: string | undefined,
+                                                                 requiredOrgInfo: RequriedOrgInfo,
+                                                                 permissions: string[]) => Promise<UserAndOrgMemberInfo>,
+) {
+    return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithAllPermissionsArgs) {
+        const orgIdExtractor = args ? args.orgIdExtractor : undefined
+        const orgNameExtractor = args ? args.orgNameExtractor : undefined
+
+        return requireOrgMemberGenericMiddleware((authorizationHeader, requiredOrgInfo) => {
+            return validateAccessTokenAndGetUserWithOrgInfoWithAllPermissions(authorizationHeader, requiredOrgInfo, args.permissions)
+        }, orgIdExtractor, orgNameExtractor)
+    }
+}
+
+function requireOrgMemberGenericMiddleware(
+    validateAccessTokenAndGetUserWithOrgInfo: (authorizationHeader: string | undefined, requiredOrgInfo: RequiredOrgInfo) => Promise<UserAndOrgMemberInfo>,
+    orgIdExtractor?: (req: Request) => string,
+    orgNameExtractor?: (req: Request) => string
+) {
+    return async function (req: Request, res: Response, next: NextFunction) {
+        let requiredOrgInfo: RequiredOrgInfo;
+        if (orgIdExtractor || orgNameExtractor) {
             const requiredOrgId = orgIdExtractor ? orgIdExtractor(req) : undefined
             const requiredOrgName = orgNameExtractor ? orgNameExtractor(req) : undefined
-            const requiredOrgInfo: RequriedOrgInfo = {
+            requiredOrgInfo = {
                 orgId: requiredOrgId,
                 orgName: requiredOrgName,
+            };
+        } else {
+            requiredOrgInfo = {
+                orgId: defaultOrgIdExtractor(req),
+                orgName: undefined,
             }
+        }
 
-            try {
-                const userAndOrgMemberInfo = await validateAccessTokenAndGetUserWithOrgInfo(req.headers.authorization, requiredOrgInfo, minimumRequiredRole)
-                req.user = userAndOrgMemberInfo.user
-                req.org = userAndOrgMemberInfo.orgMemberInfo
-                next()
-            } catch (e: any) {
-                if (e instanceof UnauthorizedException) {
-                    handleUnauthorizedException({exception: e, requireCredentials: true, res, next})
-                } else if (e instanceof ForbiddenException) {
-                    handleForbiddenExceptionWithRequiredCredentials(e, res)
-                } else if (e instanceof UnexpectedException) {
-                    handleUnexpectedException(e, res)
-                } else {
-                    handleUnexpectedException(new UnexpectedException("An unexpected exception has occurred"), res)
-                }
+        try {
+            const userAndOrgMemberInfo = await validateAccessTokenAndGetUserWithOrgInfo(req.headers.authorization, requiredOrgInfo)
+            req.user = userAndOrgMemberInfo.user
+            req.org = userAndOrgMemberInfo.orgMemberInfo
+            next()
+        } catch (e: any) {
+            if (e instanceof UnauthorizedException) {
+                handleUnauthorizedException({exception: e, requireCredentials: true, res, next})
+            } else if (e instanceof ForbiddenException) {
+                handleForbiddenExceptionWithRequiredCredentials(e, res)
+            } else if (e instanceof UnexpectedException) {
+                handleUnexpectedException(e, res)
+            } else {
+                handleUnexpectedException(new UnexpectedException("An unexpected exception has occurred"), res)
             }
         }
     }
@@ -166,7 +239,34 @@ interface HandleUnauthorizedExceptionArgs {
 }
 
 export interface RequireOrgMemberArgs {
-    minimumRequiredRole?: UserRole
     orgIdExtractor?: (req: Request) => string
     orgNameExtractor?: (req: Request) => string
+}
+
+export interface RequireOrgMemberWithMinimumRoleArgs {
+    orgIdExtractor?: (req: Request) => string
+    orgNameExtractor?: (req: Request) => string
+    minimumRequiredRole: string
+}
+
+export interface RequireOrgMemberWithExactRoleArgs {
+    orgIdExtractor?: (req: Request) => string
+    orgNameExtractor?: (req: Request) => string
+    role: string
+}
+
+export interface RequireOrgMemberWithPermissionArgs {
+    orgIdExtractor?: (req: Request) => string
+    orgNameExtractor?: (req: Request) => string
+    permission: string
+}
+
+export interface RequireOrgMemberWithAllPermissionsArgs {
+    orgIdExtractor?: (req: Request) => string
+    orgNameExtractor?: (req: Request) => string
+    permissions: string[]
+}
+
+function defaultOrgIdExtractor(req: Request) {
+    return req.params.orgId
 }

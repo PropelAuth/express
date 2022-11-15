@@ -4,7 +4,7 @@
     "type": "git",
     "url": "https://github.com/PropelAuth/express"
   },
-  "version": "1.2.8",
+  "version": "2.0.0-beta.4",
   "license": "MIT",
   "keywords": [
     "auth",
@@ -60,6 +60,6 @@
     }
   },
   "dependencies": {
-    "@propelauth/node": "^1.1.5"
+    "@propelauth/node": "^2.0.0-beta.4"
   }
 }
