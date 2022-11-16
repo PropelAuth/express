@@ -31,9 +31,7 @@ export {
     OrgIdToOrgMemberInfo,
     UserAndOrgMemberInfo,
     toOrgIdToOrgMemberInfo,
-    UserRole,
     UserMetadata,
-    toUserRole
 } from "@propelauth/node"
 
 
