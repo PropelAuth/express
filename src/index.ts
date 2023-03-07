@@ -1,10 +1,9 @@
 // For backwards compatibility
 import {BaseAuthOptions, User, OrgMemberInfo} from "@propelauth/node"
 
-type AuthOptions = BaseAuthOptions
-export type {BaseAuthOptions, AuthOptions, User, OrgMemberInfo}
+export type {BaseAuthOptions, User, OrgMemberInfo}
 
-export {initAuth} from "./auth"
+export {initAuth, AuthOptions} from "./auth"
 export type {RequireOrgMemberArgs} from "./auth"
 export type {
     TokenVerificationMetadata,
