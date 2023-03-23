@@ -4,7 +4,7 @@
     "type": "git",
     "url": "https://github.com/PropelAuth/express"
   },
-  "version": "2.0.7",
+  "version": "2.0.8",
   "license": "MIT",
   "keywords": [
     "auth",
@@ -12,7 +12,7 @@
     "user"
   ],
   "dependencies": {
-    "@propelauth/node": "^2.0.6"
+    "@propelauth/node": "^2.0.7"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^19.0.0",
