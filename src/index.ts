@@ -1,5 +1,5 @@
 // For backwards compatibility
-import {BaseAuthOptions, User, OrgMemberInfo} from "@propelauth/node"
+import {BaseAuthOptions, OrgMemberInfo, User} from "@propelauth/node"
 
 export type {BaseAuthOptions, User, OrgMemberInfo}
 
@@ -17,11 +17,15 @@ export type {
     UpdateUserEmailRequest,
     CreateMagicLinkRequest,
     MagicLink,
+    CreateAccessTokenRequest,
+    AccessToken
 } from "@propelauth/node"
 export {
+    AccessTokenCreationException,
     CreateUserException,
     ForbiddenException,
     MagicLinkCreationException,
+    UserNotFoundException,
     UnauthorizedException,
     UnexpectedException,
     UpdateUserEmailException,
