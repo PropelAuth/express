@@ -261,6 +261,7 @@ test("requireOrgMember sets user and org for extracted org", async () => {
     const orgMemberInfo = randomOrg()
     const internalUser: InternalUser = {
         user_id: uuid(),
+        email: uuid(),
         org_id_to_org_member_info: {
             [orgMemberInfo.org_id]: orgMemberInfo,
         },
@@ -287,6 +288,7 @@ test("requireOrgMember fails for valid access token but unknown org", async () =
 
     const internalUser: InternalUser = {
         user_id: uuid(),
+        email: uuid(),
     }
     const accessToken = createAccessToken({internalUser, privateKey})
 
@@ -329,6 +331,7 @@ test("requireOrgMemberWithMinimumRequiredRole works with minimumRequiredRole", a
     const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
+        org_metadata: {},
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
         user_permissions: [],
@@ -336,6 +339,7 @@ test("requireOrgMemberWithMinimumRequiredRole works with minimumRequiredRole", a
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
+        email: uuid(),
         org_id_to_org_member_info: {
             [orgMemberInfo.org_id]: orgMemberInfo,
         },
@@ -370,9 +374,10 @@ test("requireOrgMemberWithMinimumRole fails with invalid minimumRequiredRole", a
     const {requireOrgMemberWithMinimumRole} = initAuth({authUrl: AUTH_URL, apiKey})
 
     const {orgName, urlSafeOrgName} = randomOrgName()
-    const orgMemberInfo = {
+    const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
+        org_metadata: {},
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
         user_permissions: [],
@@ -380,6 +385,7 @@ test("requireOrgMemberWithMinimumRole fails with invalid minimumRequiredRole", a
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
+        email: uuid(),
         org_id_to_org_member_info: {
             [orgMemberInfo.org_id]: orgMemberInfo,
         },
@@ -410,6 +416,7 @@ test("requireOrgMemberWithExactRole works with an exact role match", async () =>
     const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
+        org_metadata: {},
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
         user_permissions: [],
@@ -417,6 +424,7 @@ test("requireOrgMemberWithExactRole works with an exact role match", async () =>
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
+        email: uuid(),
         org_id_to_org_member_info: {
             [orgMemberInfo.org_id]: orgMemberInfo,
         },
@@ -454,6 +462,7 @@ test("requireOrgMemberWithPermission works with a permissions match", async () =
     const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
+        org_metadata: {},
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
         user_permissions: ["permA", "permB"],
@@ -461,6 +470,7 @@ test("requireOrgMemberWithPermission works with a permissions match", async () =
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
+        email: uuid(),
         org_id_to_org_member_info: {
             [orgMemberInfo.org_id]: orgMemberInfo,
         },
@@ -498,6 +508,7 @@ test("requireOrgMemberWithAllPermissions works with a full permissions match", a
     const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
+        org_metadata: {},
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
         user_permissions: ["permA", "permB"],
@@ -505,6 +516,7 @@ test("requireOrgMemberWithAllPermissions works with a full permissions match", a
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
+        email: uuid(),
         org_id_to_org_member_info: {
             [orgMemberInfo.org_id]: orgMemberInfo,
         },
@@ -638,6 +650,7 @@ function randomOrgName() {
 function randomInternalUser(): InternalUser {
     return {
         user_id: uuid(),
+        email: uuid(),
         org_id_to_org_member_info: randomOrgIdToOrgMemberInfo(),
     }
 }
@@ -662,6 +675,7 @@ function randomOrg(): InternalOrgMemberInfo {
     return {
         org_id: uuid(),
         org_name: orgName,
+        org_metadata: {},
         url_safe_org_name: urlSafeOrgName,
         user_role: role,
         inherited_user_roles_plus_current_role: [role],
