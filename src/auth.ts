@@ -81,8 +81,6 @@ export function initAuth(opts: AuthOptions) {
         validateApiKey: auth.validateApiKey,
         validatePersonalApiKey: auth.validatePersonalApiKey,
         validateOrgApiKey: auth.validateOrgApiKey,
-
-
     }
 }
 
