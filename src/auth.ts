@@ -64,12 +64,23 @@ export function initAuth(opts: AuthOptions) {
         deleteUser: auth.deleteUser,
         disableUser: auth.disableUser,
         enableUser: auth.enableUser,
+        enableUserCanCreateOrgs: auth.enableUserCanCreateOrgs,
+        disableUserCanCreateOrgs: auth.disableUserCanCreateOrgs,
         changeUserRoleInOrg: auth.changeUserRoleInOrg,
         removeUserFromOrg: auth.removeUserFromOrg,
         updateOrg: auth.updateOrg,
         deleteOrg: auth.deleteOrg,
         allowOrgToSetupSamlConnection: auth.allowOrgToSetupSamlConnection,
         disallowOrgToSetupSamlConnection: auth.disallowOrgToSetupSamlConnection,
+        fetchApiKey: auth.fetchApiKey,
+        fetchCurrentApiKeys: auth.fetchCurrentApiKeys,
+        fetchArchivedApiKeys: auth.fetchArchivedApiKeys,
+        createApiKey: auth.createApiKey,
+        updateApiKey: auth.updateApiKey,
+        deleteApiKey: auth.deleteApiKey,
+        validateApiKey: auth.validateApiKey,
+        validatePersonalApiKey: auth.validatePersonalApiKey,
+        validateOrgApiKey: auth.validateOrgApiKey,
     }
 }
 
