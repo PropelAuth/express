@@ -1,12 +1,15 @@
-import {NextFunction, Request, Response} from "express"
 import {
-    BaseAuthOptions, ForbiddenException,
+    BaseAuthOptions,
+    ForbiddenException,
     initBaseAuth,
     RequriedOrgInfo,
     UnauthorizedException,
-    UnexpectedException, UserAndOrgMemberInfo, User
-} from "@propelauth/node";
-import {RequiredOrgInfo} from "@propelauth/node/dist/auth";
+    UnexpectedException,
+    User,
+    UserAndOrgMemberInfo,
+} from "@propelauth/node"
+import { RequiredOrgInfo } from "@propelauth/node/dist/auth"
+import { NextFunction, Request, Response } from "express"
 
 export interface AuthOptions extends BaseAuthOptions {
     debugMode?: boolean
@@ -28,10 +31,22 @@ export function initAuth(opts: AuthOptions) {
         debugMode,
     })
     const requireOrgMember = createRequireOrgMemberMiddleware(auth.validateAccessTokenAndGetUserWithOrgInfo, debugMode)
-    const requireOrgMemberWithMinimumRole = createRequireOrgMemberMiddlewareWithMinimumRole(auth.validateAccessTokenAndGetUserWithOrgInfoWithMinimumRole, debugMode)
-    const requireOrgMemberWithExactRole = createRequireOrgMemberMiddlewareWithExactRole(auth.validateAccessTokenAndGetUserWithOrgInfoWithExactRole, debugMode)
-    const requireOrgMemberWithPermission = createRequireOrgMemberMiddlewareWithPermission(auth.validateAccessTokenAndGetUserWithOrgInfoWithPermission, debugMode)
-    const requireOrgMemberWithAllPermissions = createRequireOrgMemberMiddlewareWithAllPermissions(auth.validateAccessTokenAndGetUserWithOrgInfoWithAllPermissions, debugMode)
+    const requireOrgMemberWithMinimumRole = createRequireOrgMemberMiddlewareWithMinimumRole(
+        auth.validateAccessTokenAndGetUserWithOrgInfoWithMinimumRole,
+        debugMode
+    )
+    const requireOrgMemberWithExactRole = createRequireOrgMemberMiddlewareWithExactRole(
+        auth.validateAccessTokenAndGetUserWithOrgInfoWithExactRole,
+        debugMode
+    )
+    const requireOrgMemberWithPermission = createRequireOrgMemberMiddlewareWithPermission(
+        auth.validateAccessTokenAndGetUserWithOrgInfoWithPermission,
+        debugMode
+    )
+    const requireOrgMemberWithAllPermissions = createRequireOrgMemberMiddlewareWithAllPermissions(
+        auth.validateAccessTokenAndGetUserWithOrgInfoWithAllPermissions,
+        debugMode
+    )
 
     return {
         requireUser,
@@ -59,6 +74,8 @@ export function initAuth(opts: AuthOptions) {
         createAccessToken: auth.createAccessToken,
         migrateUserFromExternalSource: auth.migrateUserFromExternalSource,
         disableUser2fa: auth.disableUser2fa,
+        clearUserPassword: auth.clearUserPassword,
+        inviteUserToOrg: auth.inviteUserToOrg,
         createOrg: auth.createOrg,
         addUserToOrg: auth.addUserToOrg,
         deleteUser: auth.deleteUser,
@@ -85,17 +102,17 @@ export function initAuth(opts: AuthOptions) {
 }
 
 function createUserExtractingMiddleware({
-                                            validateAccessTokenAndGetUser,
-                                            requireCredentials,
-                                            debugMode,
-                                        }: CreateRequestHandlerArgs) {
+    validateAccessTokenAndGetUser,
+    requireCredentials,
+    debugMode,
+}: CreateRequestHandlerArgs) {
     return async function (req: Request, res: Response, next: NextFunction) {
         try {
             req.user = await validateAccessTokenAndGetUser(req.headers.authorization)
             next()
         } catch (e: any) {
             if (e instanceof UnauthorizedException) {
-                handleUnauthorizedException({exception: e, requireCredentials, res, next, debugMode})
+                handleUnauthorizedException({ exception: e, requireCredentials, res, next, debugMode })
             } else if (e instanceof UnexpectedException) {
                 handleUnexpectedException(e, res, debugMode)
             } else {
@@ -106,99 +123,153 @@ function createUserExtractingMiddleware({
 }
 
 function createRequireOrgMemberMiddleware(
-    validateAccessTokenAndGetUserWithOrgInfo: (authorizationHeader: string | undefined,
-                                               requiredOrgInfo: RequriedOrgInfo) => Promise<UserAndOrgMemberInfo>,
-    debugMode: boolean,
+    validateAccessTokenAndGetUserWithOrgInfo: (
+        authorizationHeader: string | undefined,
+        requiredOrgInfo: RequriedOrgInfo
+    ) => Promise<UserAndOrgMemberInfo>,
+    debugMode: boolean
 ) {
     return function requireOrgMember(args?: RequireOrgMemberArgs) {
         const orgIdExtractor = args ? args.orgIdExtractor : undefined
         const orgNameExtractor = args ? args.orgNameExtractor : undefined
 
-        return requireOrgMemberGenericMiddleware((authorizationHeader, requiredOrgInfo) => {
-            return validateAccessTokenAndGetUserWithOrgInfo(authorizationHeader, requiredOrgInfo)
-        }, debugMode, orgIdExtractor, orgNameExtractor)
+        return requireOrgMemberGenericMiddleware(
+            (authorizationHeader, requiredOrgInfo) => {
+                return validateAccessTokenAndGetUserWithOrgInfo(authorizationHeader, requiredOrgInfo)
+            },
+            debugMode,
+            orgIdExtractor,
+            orgNameExtractor
+        )
     }
 }
 
 function createRequireOrgMemberMiddlewareWithMinimumRole(
-    validateAccessTokenAndGetUserWithOrgInfoWithMinimumRole: (authorizationHeader: string | undefined,
-                                                              requiredOrgInfo: RequriedOrgInfo,
-                                                              minimumRole: string) => Promise<UserAndOrgMemberInfo>,
-    debugMode: boolean,
+    validateAccessTokenAndGetUserWithOrgInfoWithMinimumRole: (
+        authorizationHeader: string | undefined,
+        requiredOrgInfo: RequriedOrgInfo,
+        minimumRole: string
+    ) => Promise<UserAndOrgMemberInfo>,
+    debugMode: boolean
 ) {
     return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithMinimumRoleArgs) {
         const orgIdExtractor = args ? args.orgIdExtractor : undefined
         const orgNameExtractor = args ? args.orgNameExtractor : undefined
 
-        return requireOrgMemberGenericMiddleware((authorizationHeader, requiredOrgInfo) => {
-            return validateAccessTokenAndGetUserWithOrgInfoWithMinimumRole(authorizationHeader, requiredOrgInfo, args.minimumRequiredRole)
-        }, debugMode, orgIdExtractor, orgNameExtractor)
+        return requireOrgMemberGenericMiddleware(
+            (authorizationHeader, requiredOrgInfo) => {
+                return validateAccessTokenAndGetUserWithOrgInfoWithMinimumRole(
+                    authorizationHeader,
+                    requiredOrgInfo,
+                    args.minimumRequiredRole
+                )
+            },
+            debugMode,
+            orgIdExtractor,
+            orgNameExtractor
+        )
     }
 }
 
 function createRequireOrgMemberMiddlewareWithExactRole(
-    validateAccessTokenAndGetUserWithOrgInfoWithExactRole: (authorizationHeader: string | undefined,
-                                                            requiredOrgInfo: RequriedOrgInfo,
-                                                            role: string) => Promise<UserAndOrgMemberInfo>,
-    debugMode: boolean,
+    validateAccessTokenAndGetUserWithOrgInfoWithExactRole: (
+        authorizationHeader: string | undefined,
+        requiredOrgInfo: RequriedOrgInfo,
+        role: string
+    ) => Promise<UserAndOrgMemberInfo>,
+    debugMode: boolean
 ) {
     return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithExactRoleArgs) {
         const orgIdExtractor = args ? args.orgIdExtractor : undefined
         const orgNameExtractor = args ? args.orgNameExtractor : undefined
 
-        return requireOrgMemberGenericMiddleware((authorizationHeader, requiredOrgInfo) => {
-            return validateAccessTokenAndGetUserWithOrgInfoWithExactRole(authorizationHeader, requiredOrgInfo, args.role)
-        }, debugMode, orgIdExtractor, orgNameExtractor)
+        return requireOrgMemberGenericMiddleware(
+            (authorizationHeader, requiredOrgInfo) => {
+                return validateAccessTokenAndGetUserWithOrgInfoWithExactRole(
+                    authorizationHeader,
+                    requiredOrgInfo,
+                    args.role
+                )
+            },
+            debugMode,
+            orgIdExtractor,
+            orgNameExtractor
+        )
     }
 }
 
 function createRequireOrgMemberMiddlewareWithPermission(
-    validateAccessTokenAndGetUserWithOrgInfoWithPermission: (authorizationHeader: string | undefined,
-                                                             requiredOrgInfo: RequriedOrgInfo,
-                                                             permission: string) => Promise<UserAndOrgMemberInfo>,
-    debugMode: boolean,
+    validateAccessTokenAndGetUserWithOrgInfoWithPermission: (
+        authorizationHeader: string | undefined,
+        requiredOrgInfo: RequriedOrgInfo,
+        permission: string
+    ) => Promise<UserAndOrgMemberInfo>,
+    debugMode: boolean
 ) {
     return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithPermissionArgs) {
         const orgIdExtractor = args ? args.orgIdExtractor : undefined
         const orgNameExtractor = args ? args.orgNameExtractor : undefined
 
-        return requireOrgMemberGenericMiddleware((authorizationHeader, requiredOrgInfo) => {
-            return validateAccessTokenAndGetUserWithOrgInfoWithPermission(authorizationHeader, requiredOrgInfo, args.permission)
-        }, debugMode, orgIdExtractor, orgNameExtractor)
+        return requireOrgMemberGenericMiddleware(
+            (authorizationHeader, requiredOrgInfo) => {
+                return validateAccessTokenAndGetUserWithOrgInfoWithPermission(
+                    authorizationHeader,
+                    requiredOrgInfo,
+                    args.permission
+                )
+            },
+            debugMode,
+            orgIdExtractor,
+            orgNameExtractor
+        )
     }
 }
 
 function createRequireOrgMemberMiddlewareWithAllPermissions(
-    validateAccessTokenAndGetUserWithOrgInfoWithAllPermissions: (authorizationHeader: string | undefined,
-                                                                 requiredOrgInfo: RequriedOrgInfo,
-                                                                 permissions: string[]) => Promise<UserAndOrgMemberInfo>,
+    validateAccessTokenAndGetUserWithOrgInfoWithAllPermissions: (
+        authorizationHeader: string | undefined,
+        requiredOrgInfo: RequriedOrgInfo,
+        permissions: string[]
+    ) => Promise<UserAndOrgMemberInfo>,
     debugMode: boolean
 ) {
     return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithAllPermissionsArgs) {
         const orgIdExtractor = args ? args.orgIdExtractor : undefined
         const orgNameExtractor = args ? args.orgNameExtractor : undefined
 
-        return requireOrgMemberGenericMiddleware((authorizationHeader, requiredOrgInfo) => {
-            return validateAccessTokenAndGetUserWithOrgInfoWithAllPermissions(authorizationHeader, requiredOrgInfo, args.permissions)
-        }, debugMode, orgIdExtractor, orgNameExtractor)
+        return requireOrgMemberGenericMiddleware(
+            (authorizationHeader, requiredOrgInfo) => {
+                return validateAccessTokenAndGetUserWithOrgInfoWithAllPermissions(
+                    authorizationHeader,
+                    requiredOrgInfo,
+                    args.permissions
+                )
+            },
+            debugMode,
+            orgIdExtractor,
+            orgNameExtractor
+        )
     }
 }
 
 function requireOrgMemberGenericMiddleware(
-    validateAccessTokenAndGetUserWithOrgInfo: (authorizationHeader: string | undefined, requiredOrgInfo: RequiredOrgInfo) => Promise<UserAndOrgMemberInfo>,
+    validateAccessTokenAndGetUserWithOrgInfo: (
+        authorizationHeader: string | undefined,
+        requiredOrgInfo: RequiredOrgInfo
+    ) => Promise<UserAndOrgMemberInfo>,
     debugMode: boolean,
     orgIdExtractor?: (req: Request) => string,
-    orgNameExtractor?: (req: Request) => string,
+    orgNameExtractor?: (req: Request) => string
 ) {
     return async function (req: Request, res: Response, next: NextFunction) {
-        let requiredOrgInfo: RequiredOrgInfo;
+        let requiredOrgInfo: RequiredOrgInfo
         if (orgIdExtractor || orgNameExtractor) {
             const requiredOrgId = orgIdExtractor ? orgIdExtractor(req) : undefined
             const requiredOrgName = orgNameExtractor ? orgNameExtractor(req) : undefined
             requiredOrgInfo = {
                 orgId: requiredOrgId,
                 orgName: requiredOrgName,
-            };
+            }
         } else {
             requiredOrgInfo = {
                 orgId: defaultOrgIdExtractor(req),
@@ -207,19 +278,26 @@ function requireOrgMemberGenericMiddleware(
         }
 
         try {
-            const userAndOrgMemberInfo = await validateAccessTokenAndGetUserWithOrgInfo(req.headers.authorization, requiredOrgInfo)
+            const userAndOrgMemberInfo = await validateAccessTokenAndGetUserWithOrgInfo(
+                req.headers.authorization,
+                requiredOrgInfo
+            )
             req.user = userAndOrgMemberInfo.user
             req.org = userAndOrgMemberInfo.orgMemberInfo
             next()
         } catch (e: any) {
             if (e instanceof UnauthorizedException) {
-                handleUnauthorizedException({exception: e, requireCredentials: true, res, next, debugMode})
+                handleUnauthorizedException({ exception: e, requireCredentials: true, res, next, debugMode })
             } else if (e instanceof ForbiddenException) {
                 handleForbiddenExceptionWithRequiredCredentials(e, res, debugMode)
             } else if (e instanceof UnexpectedException) {
                 handleUnexpectedException(e, res, debugMode)
             } else {
-                handleUnexpectedException(new UnexpectedException("An unexpected exception has occurred"), res, debugMode)
+                handleUnexpectedException(
+                    new UnexpectedException("An unexpected exception has occurred"),
+                    res,
+                    debugMode
+                )
             }
         }
     }
@@ -227,12 +305,12 @@ function requireOrgMemberGenericMiddleware(
 
 // With an unauthorized exception, we only reject the request if credentials are required
 function handleUnauthorizedException({
-                                         exception,
-                                         requireCredentials,
-                                         res,
-                                         next,
-                                         debugMode
-                                     }: HandleUnauthorizedExceptionArgs) {
+    exception,
+    requireCredentials,
+    res,
+    next,
+    debugMode,
+}: HandleUnauthorizedExceptionArgs) {
     if (requireCredentials && debugMode) {
         res.status(exception.status).send(exception.message)
     } else if (requireCredentials) {
@@ -254,7 +332,6 @@ function handleForbiddenExceptionWithRequiredCredentials(
         res.status(exception.status).send()
     }
 }
-
 
 // With an unexpected exception, we will always reject the request
 function handleUnexpectedException(exception: UnexpectedException, res: Response, debugMode: boolean) {
