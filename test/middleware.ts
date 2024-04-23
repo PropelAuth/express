@@ -1,10 +1,16 @@
-import {generateKeyPair} from "crypto"
-import {Request, Response} from "express"
-import nock from "nock"
-import {v4 as uuid} from "uuid"
-import {initAuth} from "../src"
+import {
+    InternalOrgMemberInfo,
+    InternalUser,
+    OrgRoleStructure,
+    TokenVerificationMetadata,
+    toUser,
+} from "@propelauth/node"
+import { generateKeyPair } from "crypto"
+import { Request, Response } from "express"
 import jwt from "jsonwebtoken"
-import {InternalOrgMemberInfo, InternalUser, TokenVerificationMetadata, toUser} from "@propelauth/node";
+import nock from "nock"
+import { v4 as uuid } from "uuid"
+import { initAuth } from "../src"
 
 const AUTH_URL = "https://auth.example.com"
 const ALGO = "RS256"
@@ -23,11 +29,11 @@ test("bad authUrl is rejected", async () => {
 })
 
 test("requireUser parses and sets req.user", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireUser} = initAuth({authUrl: AUTH_URL + "/", apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireUser } = initAuth({ authUrl: AUTH_URL + "/", apiKey })
 
     const internalUser = randomInternalUser()
-    const accessToken = createAccessToken({internalUser, privateKey})
+    const accessToken = createAccessToken({ internalUser, privateKey })
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
     const res = null as any as Response
@@ -40,11 +46,11 @@ test("requireUser parses and sets req.user", async () => {
 })
 
 test("optionalUser parses and sets req.user", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {optionalUser} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { optionalUser } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const internalUser = randomInternalUser()
-    const accessToken = createAccessToken({internalUser, privateKey})
+    const accessToken = createAccessToken({ internalUser, privateKey })
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
     const res = null as any as Response
@@ -58,19 +64,19 @@ test("optionalUser parses and sets req.user", async () => {
 
 test("when manualTokenVerificationMetadata is specified, no fetch is made", async () => {
     // Never setup the token verification endpoint
-    const {privateKey, publicKey} = await generateRsaKeyPair()
+    const { privateKey, publicKey } = await generateRsaKeyPair()
     const tokenVerificationMetadata: TokenVerificationMetadata = {
         issuer: AUTH_URL,
         verifierKey: publicKey,
-    };
-    const {requireUser} = initAuth({
+    }
+    const { requireUser } = initAuth({
         authUrl: AUTH_URL + "/",
         apiKey: "irrelevant api key for this test",
         manualTokenVerificationMetadata: tokenVerificationMetadata,
     })
 
     const internalUser = randomInternalUser()
-    const accessToken = createAccessToken({internalUser, privateKey})
+    const accessToken = createAccessToken({ internalUser, privateKey })
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
     const res = null as any as Response
@@ -82,20 +88,19 @@ test("when manualTokenVerificationMetadata is specified, no fetch is made", asyn
     expect(nock.isDone()).toBe(true)
 })
 
-
 test("requireUser rejects expired access tokens", async () => {
     jest.useFakeTimers("modern")
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireUser} = initAuth({authUrl: AUTH_URL + "/", apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireUser } = initAuth({ authUrl: AUTH_URL + "/", apiKey })
 
     const internalUser = randomInternalUser()
-    const accessToken = createAccessToken({internalUser, expiresIn: "30m", privateKey})
+    const accessToken = createAccessToken({ internalUser, expiresIn: "30m", privateKey })
 
     // 31 minutes
     jest.advanceTimersByTime(1000 * 60 * 31)
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-    const {res, sendFn} = createResExpectingStatusCode(401)
+    const { res, sendFn } = createResExpectingStatusCode(401)
     const next = jest.fn()
 
     await requireUser(req, res, next)
@@ -103,16 +108,15 @@ test("requireUser rejects expired access tokens", async () => {
     expect(sendFn).toBeCalledTimes(1)
     expect(next).not.toHaveBeenCalled()
     expect(nock.isDone()).toBe(true)
-
 })
 
 test("optionalUser doesn't reject expired access token, but doesn't set req.user", async () => {
     jest.useFakeTimers("modern")
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {optionalUser} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { optionalUser } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const internalUser = randomInternalUser()
-    const accessToken = createAccessToken({internalUser, expiresIn: "30m", privateKey})
+    const accessToken = createAccessToken({ internalUser, expiresIn: "30m", privateKey })
 
     // 31 minutes
     jest.advanceTimersByTime(1000 * 60 * 31)
@@ -128,13 +132,13 @@ test("optionalUser doesn't reject expired access token, but doesn't set req.user
 })
 
 test("requireUser rejects invalid access tokens", async () => {
-    const {apiKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireUser} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireUser } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const accessToken = "invalid"
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-    const {res, sendFn} = createResExpectingStatusCode(401)
+    const { res, sendFn } = createResExpectingStatusCode(401)
     const next = jest.fn()
 
     await requireUser(req, res, next)
@@ -145,8 +149,8 @@ test("requireUser rejects invalid access tokens", async () => {
 })
 
 test("optionalUser doesn't reject invalid access tokens", async () => {
-    const {apiKey} = await setupTokenVerificationMetadataEndpoint()
-    const {optionalUser} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey } = await setupTokenVerificationMetadataEndpoint()
+    const { optionalUser } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const accessToken = "invalid"
 
@@ -161,11 +165,11 @@ test("optionalUser doesn't reject invalid access tokens", async () => {
 })
 
 test("requireUser rejects missing authorization header", async () => {
-    const {apiKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireUser} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireUser } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const req = createReqWithAuthorizationHeader(undefined)
-    const {res, sendFn} = createResExpectingStatusCode(401)
+    const { res, sendFn } = createResExpectingStatusCode(401)
     const next = jest.fn()
 
     await requireUser(req, res, next)
@@ -176,8 +180,8 @@ test("requireUser rejects missing authorization header", async () => {
 })
 
 test("optionalUser doesn't reject missing authorization header", async () => {
-    const {apiKey} = await setupTokenVerificationMetadataEndpoint()
-    const {optionalUser} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey } = await setupTokenVerificationMetadataEndpoint()
+    const { optionalUser } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const req = createReqWithAuthorizationHeader(undefined)
     const res = null as any as Response
@@ -190,11 +194,11 @@ test("optionalUser doesn't reject missing authorization header", async () => {
 })
 
 test("requireUser fails with incorrect apiKey", async () => {
-    const {apiKey} = await setupErrorTokenVerificationMetadataEndpoint(401)
-    const {requireUser} = initAuth({authUrl: AUTH_URL, apiKey: apiKey})
+    const { apiKey } = await setupErrorTokenVerificationMetadataEndpoint(401)
+    const { requireUser } = initAuth({ authUrl: AUTH_URL, apiKey: apiKey })
 
     const req = createReqWithAuthorizationHeader(`shouldnt matter`)
-    const {res, sendFn} = createResExpectingStatusCode(503)
+    const { res, sendFn } = createResExpectingStatusCode(503)
     const next = jest.fn()
 
     await requireUser(req, res, next)
@@ -205,11 +209,11 @@ test("requireUser fails with incorrect apiKey", async () => {
 })
 
 test("optionalUser fails with incorrect apiKey", async () => {
-    const {apiKey} = await setupErrorTokenVerificationMetadataEndpoint(401)
-    const {optionalUser} = initAuth({authUrl: AUTH_URL, apiKey: apiKey})
+    const { apiKey } = await setupErrorTokenVerificationMetadataEndpoint(401)
+    const { optionalUser } = initAuth({ authUrl: AUTH_URL, apiKey: apiKey })
 
     const req = createReqWithAuthorizationHeader(`shouldnt matter`)
-    const {res, sendFn} = createResExpectingStatusCode(503)
+    const { res, sendFn } = createResExpectingStatusCode(503)
     const next = jest.fn()
 
     await optionalUser(req, res, next)
@@ -220,14 +224,14 @@ test("optionalUser fails with incorrect apiKey", async () => {
 })
 
 test("requireUser fails with incorrect issuer", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireUser} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireUser } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const internalUser = randomInternalUser()
-    const accessToken = createAccessToken({internalUser, privateKey, issuer: "bad"})
+    const accessToken = createAccessToken({ internalUser, privateKey, issuer: "bad" })
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-    const {res, sendFn} = createResExpectingStatusCode(401)
+    const { res, sendFn } = createResExpectingStatusCode(401)
     const next = jest.fn()
 
     await requireUser(req, res, next)
@@ -238,11 +242,11 @@ test("requireUser fails with incorrect issuer", async () => {
 })
 
 test("optionalUser doesn't fail with incorrect issuer, but no user set", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {optionalUser} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { optionalUser } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const internalUser = randomInternalUser()
-    const accessToken = createAccessToken({internalUser, privateKey, issuer: "bad"})
+    const accessToken = createAccessToken({ internalUser, privateKey, issuer: "bad" })
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
     const res = null as any as Response
@@ -255,8 +259,8 @@ test("optionalUser doesn't fail with incorrect issuer, but no user set", async (
 })
 
 test("requireOrgMember sets user and org for extracted org", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireOrgMember} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireOrgMember } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const orgMemberInfo = randomOrg()
     const internalUser: InternalUser = {
@@ -266,14 +270,14 @@ test("requireOrgMember sets user and org for extracted org", async () => {
             [orgMemberInfo.org_id]: orgMemberInfo,
         },
     }
-    const accessToken = createAccessToken({internalUser, privateKey})
+    const accessToken = createAccessToken({ internalUser, privateKey })
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
     const res = null as any as Response
     const next = jest.fn()
 
     const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
-    const requireOrgMemberMiddleware = requireOrgMember({orgIdExtractor})
+    const requireOrgMemberMiddleware = requireOrgMember({ orgIdExtractor })
     await requireOrgMemberMiddleware(req, res, next)
 
     const user = toUser(internalUser)
@@ -283,21 +287,21 @@ test("requireOrgMember sets user and org for extracted org", async () => {
 })
 
 test("requireOrgMember fails for valid access token but unknown org", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireOrgMember} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireOrgMember } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const internalUser: InternalUser = {
         user_id: uuid(),
         email: uuid(),
     }
-    const accessToken = createAccessToken({internalUser, privateKey})
+    const accessToken = createAccessToken({ internalUser, privateKey })
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-    const {res, sendFn} = createResExpectingStatusCode(403)
+    const { res, sendFn } = createResExpectingStatusCode(403)
     const next = jest.fn()
 
     const orgIdExtractor = (_req: Request) => uuid()
-    const requireOrgMemberMiddleware = requireOrgMember({orgIdExtractor})
+    const requireOrgMemberMiddleware = requireOrgMember({ orgIdExtractor })
     await requireOrgMemberMiddleware(req, res, next)
 
     expect(req.org).toBeUndefined()
@@ -306,15 +310,15 @@ test("requireOrgMember fails for valid access token but unknown org", async () =
 })
 
 test("requireOrgMember fails for invalid access token", async () => {
-    const {apiKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireOrgMember} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireOrgMember } = initAuth({ authUrl: AUTH_URL, apiKey })
 
     const req = createReqWithAuthorizationHeader(undefined)
-    const {res, sendFn} = createResExpectingStatusCode(401)
+    const { res, sendFn } = createResExpectingStatusCode(401)
     const next = jest.fn()
 
     const orgIdExtractor = (_req: Request) => uuid()
-    const requireOrgMemberMiddleware = requireOrgMember({orgIdExtractor})
+    const requireOrgMemberMiddleware = requireOrgMember({ orgIdExtractor })
     await requireOrgMemberMiddleware(req, res, next)
 
     expect(req.user).toBeUndefined()
@@ -324,10 +328,10 @@ test("requireOrgMember fails for invalid access token", async () => {
 })
 
 test("requireOrgMemberWithMinimumRequiredRole works with minimumRequiredRole", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireOrgMemberWithMinimumRole} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireOrgMemberWithMinimumRole } = initAuth({ authUrl: AUTH_URL, apiKey })
 
-    const {orgName, urlSafeOrgName} = randomOrgName()
+    const { orgName, urlSafeOrgName } = randomOrgName()
     const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
@@ -335,7 +339,9 @@ test("requireOrgMemberWithMinimumRequiredRole works with minimumRequiredRole", a
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
         user_permissions: [],
-        inherited_user_roles_plus_current_role: ["Admin", "Member"]
+        inherited_user_roles_plus_current_role: ["Admin", "Member"],
+        additional_roles: [],
+        org_role_structure: OrgRoleStructure.SingleRole,
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
@@ -345,16 +351,19 @@ test("requireOrgMemberWithMinimumRequiredRole works with minimumRequiredRole", a
         },
     }
     const user = toUser(internalUser)
-    const accessToken = createAccessToken({internalUser, privateKey})
+    const accessToken = createAccessToken({ internalUser, privateKey })
 
     const rolesThatShouldSucceed = new Set(["Admin", "Member"])
     for (let role of ["Owner", "Admin", "Member"]) {
         const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-        const {res, sendFn} = createResExpectingStatusCode(403)
+        const { res, sendFn } = createResExpectingStatusCode(403)
         const next = jest.fn()
 
         const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
-        const requireOrgMemberMiddleware = requireOrgMemberWithMinimumRole({orgIdExtractor, minimumRequiredRole: role})
+        const requireOrgMemberMiddleware = requireOrgMemberWithMinimumRole({
+            orgIdExtractor,
+            minimumRequiredRole: role,
+        })
         await requireOrgMemberMiddleware(req, res, next)
 
         if (rolesThatShouldSucceed.has(role)) {
@@ -370,10 +379,10 @@ test("requireOrgMemberWithMinimumRequiredRole works with minimumRequiredRole", a
 })
 
 test("requireOrgMemberWithMinimumRole fails with invalid minimumRequiredRole", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireOrgMemberWithMinimumRole} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireOrgMemberWithMinimumRole } = initAuth({ authUrl: AUTH_URL, apiKey })
 
-    const {orgName, urlSafeOrgName} = randomOrgName()
+    const { orgName, urlSafeOrgName } = randomOrgName()
     const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
@@ -381,7 +390,9 @@ test("requireOrgMemberWithMinimumRole fails with invalid minimumRequiredRole", a
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
         user_permissions: [],
-        inherited_user_roles_plus_current_role: ["Admin", "Member"]
+        inherited_user_roles_plus_current_role: ["Admin", "Member"],
+        additional_roles: [],
+        org_role_structure: OrgRoleStructure.SingleRole,
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
@@ -390,16 +401,16 @@ test("requireOrgMemberWithMinimumRole fails with invalid minimumRequiredRole", a
             [orgMemberInfo.org_id]: orgMemberInfo,
         },
     }
-    const accessToken = createAccessToken({internalUser, privateKey})
+    const accessToken = createAccessToken({ internalUser, privateKey })
 
     const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-    const {res, sendFn} = createResExpectingStatusCode(403)
+    const { res, sendFn } = createResExpectingStatusCode(403)
     const next = jest.fn()
 
     const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
     const requireOrgMemberMiddleware = requireOrgMemberWithMinimumRole({
         orgIdExtractor,
-        minimumRequiredRole: "js problems"
+        minimumRequiredRole: "js problems",
     })
     await requireOrgMemberMiddleware(req, res, next)
 
@@ -409,10 +420,10 @@ test("requireOrgMemberWithMinimumRole fails with invalid minimumRequiredRole", a
 })
 
 test("requireOrgMemberWithExactRole works with an exact role match", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireOrgMemberWithExactRole} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireOrgMemberWithExactRole } = initAuth({ authUrl: AUTH_URL, apiKey })
 
-    const {orgName, urlSafeOrgName} = randomOrgName()
+    const { orgName, urlSafeOrgName } = randomOrgName()
     const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
@@ -420,7 +431,9 @@ test("requireOrgMemberWithExactRole works with an exact role match", async () =>
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
         user_permissions: [],
-        inherited_user_roles_plus_current_role: ["Admin", "Member"]
+        inherited_user_roles_plus_current_role: ["Admin", "Member"],
+        additional_roles: [],
+        org_role_structure: OrgRoleStructure.SingleRole,
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
@@ -430,16 +443,16 @@ test("requireOrgMemberWithExactRole works with an exact role match", async () =>
         },
     }
     const user = toUser(internalUser)
-    const accessToken = createAccessToken({internalUser, privateKey})
+    const accessToken = createAccessToken({ internalUser, privateKey })
 
     const rolesThatShouldSucceed = new Set(["Admin"])
     for (let role of ["Owner", "Admin", "Member", "other"]) {
         const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-        const {res, sendFn} = createResExpectingStatusCode(403)
+        const { res, sendFn } = createResExpectingStatusCode(403)
         const next = jest.fn()
 
         const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
-        const requireOrgMemberMiddleware = requireOrgMemberWithExactRole({orgIdExtractor, role: role})
+        const requireOrgMemberMiddleware = requireOrgMemberWithExactRole({ orgIdExtractor, role: role })
         await requireOrgMemberMiddleware(req, res, next)
 
         if (rolesThatShouldSucceed.has(role)) {
@@ -455,10 +468,10 @@ test("requireOrgMemberWithExactRole works with an exact role match", async () =>
 })
 
 test("requireOrgMemberWithPermission works with a permissions match", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireOrgMemberWithPermission} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireOrgMemberWithPermission } = initAuth({ authUrl: AUTH_URL, apiKey })
 
-    const {orgName, urlSafeOrgName} = randomOrgName()
+    const { orgName, urlSafeOrgName } = randomOrgName()
     const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
@@ -466,7 +479,9 @@ test("requireOrgMemberWithPermission works with a permissions match", async () =
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
         user_permissions: ["permA", "permB"],
-        inherited_user_roles_plus_current_role: ["Admin", "Member"]
+        inherited_user_roles_plus_current_role: ["Admin", "Member"],
+        additional_roles: [],
+        org_role_structure: OrgRoleStructure.SingleRole,
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
@@ -476,16 +491,16 @@ test("requireOrgMemberWithPermission works with a permissions match", async () =
         },
     }
     const user = toUser(internalUser)
-    const accessToken = createAccessToken({internalUser, privateKey})
+    const accessToken = createAccessToken({ internalUser, privateKey })
 
     const permissionsThatShouldSucceed = new Set(["permA", "permB"])
     for (let permission of ["permA", "permB", "permC", "permD"]) {
         const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-        const {res, sendFn} = createResExpectingStatusCode(403)
+        const { res, sendFn } = createResExpectingStatusCode(403)
         const next = jest.fn()
 
         const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
-        const requireOrgMemberMiddleware = requireOrgMemberWithPermission({orgIdExtractor, permission: permission})
+        const requireOrgMemberMiddleware = requireOrgMemberWithPermission({ orgIdExtractor, permission: permission })
         await requireOrgMemberMiddleware(req, res, next)
 
         if (permissionsThatShouldSucceed.has(permission)) {
@@ -501,10 +516,10 @@ test("requireOrgMemberWithPermission works with a permissions match", async () =
 })
 
 test("requireOrgMemberWithAllPermissions works with a full permissions match", async () => {
-    const {apiKey, privateKey} = await setupTokenVerificationMetadataEndpoint()
-    const {requireOrgMemberWithAllPermissions} = initAuth({authUrl: AUTH_URL, apiKey})
+    const { apiKey, privateKey } = await setupTokenVerificationMetadataEndpoint()
+    const { requireOrgMemberWithAllPermissions } = initAuth({ authUrl: AUTH_URL, apiKey })
 
-    const {orgName, urlSafeOrgName} = randomOrgName()
+    const { orgName, urlSafeOrgName } = randomOrgName()
     const orgMemberInfo: InternalOrgMemberInfo = {
         org_id: uuid(),
         org_name: orgName,
@@ -512,7 +527,9 @@ test("requireOrgMemberWithAllPermissions works with a full permissions match", a
         url_safe_org_name: urlSafeOrgName,
         user_role: "Admin",
         user_permissions: ["permA", "permB"],
-        inherited_user_roles_plus_current_role: ["Admin", "Member"]
+        inherited_user_roles_plus_current_role: ["Admin", "Member"],
+        additional_roles: [],
+        org_role_structure: OrgRoleStructure.SingleRole,
     }
     const internalUser: InternalUser = {
         user_id: uuid(),
@@ -522,16 +539,16 @@ test("requireOrgMemberWithAllPermissions works with a full permissions match", a
         },
     }
     const user = toUser(internalUser)
-    const accessToken = createAccessToken({internalUser, privateKey})
+    const accessToken = createAccessToken({ internalUser, privateKey })
 
     // Should succeed
     for (let permissions of [["permA", "permB"], ["permA"], ["permB"], []]) {
         const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-        const {res, sendFn} = createResExpectingStatusCode(403)
+        const { res, sendFn } = createResExpectingStatusCode(403)
         const next = jest.fn()
 
         const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
-        const requireOrgMemberMiddleware = requireOrgMemberWithAllPermissions({orgIdExtractor, permissions})
+        const requireOrgMemberMiddleware = requireOrgMemberWithAllPermissions({ orgIdExtractor, permissions })
         await requireOrgMemberMiddleware(req, res, next)
 
         expect(req.user).toEqual(user)
@@ -542,11 +559,11 @@ test("requireOrgMemberWithAllPermissions works with a full permissions match", a
     // Should fail
     for (let permissions of [["permA", "permB", "permC"], ["permC"], ["permB", "permC"]]) {
         const req = createReqWithAuthorizationHeader(`Bearer ${accessToken}`)
-        const {res, sendFn} = createResExpectingStatusCode(403)
+        const { res, sendFn } = createResExpectingStatusCode(403)
         const next = jest.fn()
 
         const orgIdExtractor = (_req: Request) => orgMemberInfo.org_id
-        const requireOrgMemberMiddleware = requireOrgMemberWithAllPermissions({orgIdExtractor, permissions})
+        const requireOrgMemberMiddleware = requireOrgMemberWithAllPermissions({ orgIdExtractor, permissions })
         await requireOrgMemberMiddleware(req, res, next)
 
         expect(req.org).toBeUndefined()
@@ -556,7 +573,7 @@ test("requireOrgMemberWithAllPermissions works with a full permissions match", a
 })
 
 async function setupTokenVerificationMetadataEndpoint() {
-    const {publicKey, privateKey} = await generateRsaKeyPair()
+    const { publicKey, privateKey } = await generateRsaKeyPair()
     const apiKey = randomString()
 
     const scope = nock(AUTH_URL)
@@ -569,7 +586,7 @@ async function setupTokenVerificationMetadataEndpoint() {
             })
         )
 
-    return {privateKey, apiKey, scope}
+    return { privateKey, apiKey, scope }
 }
 
 async function setupErrorTokenVerificationMetadataEndpoint(statusCode: number) {
@@ -580,14 +597,14 @@ async function setupErrorTokenVerificationMetadataEndpoint(statusCode: number) {
         .matchHeader("authorization", `Bearer ${apiKey}`)
         .reply(statusCode)
 
-    return {apiKey, scope}
+    return { apiKey, scope }
 }
 
 function createReqWithAuthorizationHeader(authorizationHeader?: string): Request {
     return {
         headers: {
-            authorization: authorizationHeader
-        }
+            authorization: authorizationHeader,
+        },
     } as any as Request
 }
 
@@ -601,10 +618,10 @@ function createResExpectingStatusCode(expectedStatusCode: number) {
             }
         },
     } as any as Response
-    return {res, sendFn}
+    return { res, sendFn }
 }
 
-function createAccessToken({internalUser, privateKey, expiresIn, issuer}: CreateAccessTokenArgs): string {
+function createAccessToken({ internalUser, privateKey, expiresIn, issuer }: CreateAccessTokenArgs): string {
     return jwt.sign(internalUser, privateKey, {
         algorithm: ALGO,
         expiresIn: expiresIn ? expiresIn : "1d",
@@ -614,7 +631,7 @@ function createAccessToken({internalUser, privateKey, expiresIn, issuer}: Create
 
 async function generateRsaKeyPair(): Promise<{ publicKey: string; privateKey: string }> {
     return new Promise((resolve, reject) => {
-        generateKeyPair("rsa", {modulusLength: 2048}, (err, publicKey, privateKey) => {
+        generateKeyPair("rsa", { modulusLength: 2048 }, (err, publicKey, privateKey) => {
             if (err) {
                 reject(err)
             } else {
@@ -644,7 +661,7 @@ function randomString() {
 function randomOrgName() {
     const orgName = randomString()
     const urlSafeOrgName = orgName.replace(" ", "_").toLowerCase()
-    return {orgName, urlSafeOrgName}
+    return { orgName, urlSafeOrgName }
 }
 
 function randomInternalUser(): InternalUser {
@@ -670,7 +687,7 @@ function randomOrgIdToOrgMemberInfo(): { [org_id: string]: InternalOrgMemberInfo
 }
 
 function randomOrg(): InternalOrgMemberInfo {
-    const {orgName, urlSafeOrgName} = randomOrgName()
+    const { orgName, urlSafeOrgName } = randomOrgName()
     const role = choose(["Owner", "Admin", "Member"])
     return {
         org_id: uuid(),
@@ -679,7 +696,9 @@ function randomOrg(): InternalOrgMemberInfo {
         url_safe_org_name: urlSafeOrgName,
         user_role: role,
         inherited_user_roles_plus_current_role: [role],
-        user_permissions: []
+        user_permissions: [],
+        additional_roles: [],
+        org_role_structure: OrgRoleStructure.SingleRole,
     }
 }
 
