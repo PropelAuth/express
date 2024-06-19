@@ -1,10 +1,5 @@
-import {
-    InternalOrgMemberInfo,
-    InternalUser,
-    OrgRoleStructure,
-    TokenVerificationMetadata,
-    toUser,
-} from "@propelauth/node"
+import { InternalOrgMemberInfo, InternalUser, TokenVerificationMetadata, toUser } from "@propelauth/node"
+import { OrgRoleStructure } from "@propelauth/node-apis"
 import { generateKeyPair } from "crypto"
 import { Request, Response } from "express"
 import jwt from "jsonwebtoken"
