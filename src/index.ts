@@ -1,42 +1,83 @@
 // For backwards compatibility
-import {BaseAuthOptions, OrgMemberInfo, User} from "@propelauth/node"
+import { BaseAuthOptions, OrgMemberInfo, User } from "@propelauth/node"
 
-export type {BaseAuthOptions, User, OrgMemberInfo}
-
-export {initAuth, AuthOptions} from "./auth"
-export type {RequireOrgMemberArgs} from "./auth"
-export type {
-    TokenVerificationMetadata,
-    OrgQueryResponse,
-    OrgQuery,
-    UsersQuery,
-    UsersInOrgQuery,
-    UsersPagedResponse,
-    CreateUserRequest,
-    UpdateUserMetadataRequest,
-    UpdateUserEmailRequest,
-    CreateMagicLinkRequest,
-    MagicLink,
-    CreateAccessTokenRequest,
-    AccessToken
-} from "@propelauth/node"
 export {
     AccessTokenCreationException,
+    AddUserToOrgException,
+    ApiKeyCreateException,
+    ApiKeyDeleteException,
+    ApiKeyFetchException,
+    ApiKeyUpdateException,
+    ApiKeyValidateException,
+    BadRequestException,
+    ChangeUserRoleInOrgException,
+    CreateOrgException,
     CreateUserException,
     ForbiddenException,
     MagicLinkCreationException,
-    UserNotFoundException,
-    UnauthorizedException,
-    UnexpectedException,
-    UpdateUserEmailException,
-    UpdateUserMetadataException,
+    MigrateUserException,
     Org,
     OrgIdToOrgMemberInfo,
-    UserAndOrgMemberInfo,
+    RemoveUserFromOrgException,
     toOrgIdToOrgMemberInfo,
+    toUser,
+    UnauthorizedException,
+    UnexpectedException,
+    UpdateOrgException,
+    UpdateUserEmailException,
+    UpdateUserMetadataException,
+    UpdateUserPasswordException,
+    UserAndOrgMemberInfo,
+    UserClass,
     UserMetadata,
+    UserNotFoundException,
 } from "@propelauth/node"
-
+export type {
+    AccessToken,
+    AddUserToOrgRequest,
+    ApiKeyFull,
+    ApiKeyNew,
+    ApiKeyResultPage,
+    ApiKeysCreateRequest,
+    ApiKeysQueryRequest,
+    ApiKeyUpdateRequest,
+    ApiKeyValidation,
+    ChangeUserRoleInOrgRequest,
+    CreateAccessTokenRequest,
+    CreatedOrg,
+    CreatedUser,
+    CreateMagicLinkRequest,
+    CreateOrgRequest,
+    CreateUserRequest,
+    CustomRoleMapping,
+    CustomRoleMappings,
+    InternalOrgMemberInfo,
+    InternalUser,
+    InviteUserToOrgRequest,
+    LoginMethod,
+    MagicLink,
+    MigrateUserFromExternalSourceRequest,
+    OrgApiKeyValidation,
+    OrgQuery,
+    OrgQueryResponse,
+    PersonalApiKeyValidation,
+    RemoveUserFromOrgRequest,
+    SamlLoginProvider,
+    SocialLoginProvider,
+    TokenVerificationMetadata,
+    UpdateOrgRequest,
+    UpdateUserEmailRequest,
+    UpdateUserMetadataRequest,
+    UpdateUserPasswordRequest,
+    UserProperties,
+    UserSignupQueryParams,
+    UsersInOrgQuery,
+    UsersPagedResponse,
+    UsersQuery,
+} from "@propelauth/node"
+export { AuthOptions, initAuth } from "./auth"
+export type { RequireOrgMemberArgs } from "./auth"
+export type { BaseAuthOptions, User, OrgMemberInfo }
 
 declare global {
     namespace Express {
