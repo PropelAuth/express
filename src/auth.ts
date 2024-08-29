@@ -6,6 +6,7 @@ import {
     UnauthorizedException,
     UnexpectedException,
     User,
+    UserClass,
     UserAndOrgMemberInfo,
 } from "@propelauth/node"
 import { RequiredOrgInfo } from "@propelauth/node/dist/auth"
@@ -22,6 +23,11 @@ export function initAuth(opts: AuthOptions) {
     // Create middlewares
     const requireUser = createUserExtractingMiddleware({
         validateAccessTokenAndGetUser: auth.validateAccessTokenAndGetUser,
+        requireCredentials: true,
+        debugMode,
+    })
+    const requireUserAndGetUserClass = createUserAndGetUserClassExtractingMiddleware({
+        validateAccessTokenAndGetUserClass: auth.validateAccessTokenAndGetUserClass,
         requireCredentials: true,
         debugMode,
     })
@@ -50,6 +56,7 @@ export function initAuth(opts: AuthOptions) {
 
     return {
         requireUser,
+        requireUserAndGetUserClass,
         optionalUser,
         requireOrgMember,
         requireOrgMemberWithMinimumRole,
@@ -109,6 +116,27 @@ function createUserExtractingMiddleware({
     return async function (req: Request, res: Response, next: NextFunction) {
         try {
             req.user = await validateAccessTokenAndGetUser(req.headers.authorization)
+            next()
+        } catch (e: any) {
+            if (e instanceof UnauthorizedException) {
+                handleUnauthorizedException({ exception: e, requireCredentials, res, next, debugMode })
+            } else if (e instanceof UnexpectedException) {
+                handleUnexpectedException(e, res, debugMode)
+            } else {
+                throw e
+            }
+        }
+    }
+}
+
+function createUserAndGetUserClassExtractingMiddleware({
+    validateAccessTokenAndGetUserClass,
+    requireCredentials,
+    debugMode,
+}: CreateRequestAndGetUserClassHandlerArgs) {
+    return async function (req: Request, res: Response, next: NextFunction) {
+        try {
+            req.user = await validateAccessTokenAndGetUserClass(req.headers.authorization)
             next()
         } catch (e: any) {
             if (e instanceof UnauthorizedException) {
@@ -348,8 +376,8 @@ interface CreateRequestHandlerArgs {
     debugMode: boolean
 }
 
-interface CreateRequestHandlerArgs {
-    validateAccessTokenAndGetUser: (authorizationHeader?: string) => Promise<User>
+interface CreateRequestAndGetUserClassHandlerArgs {
+    validateAccessTokenAndGetUserClass: (authorizationHeader?: string) => Promise<UserClass>
     requireCredentials: boolean
     debugMode: boolean
 }
