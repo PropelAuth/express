@@ -1,5 +1,5 @@
 // For backwards compatibility
-import { BaseAuthOptions, OrgMemberInfo, User } from "@propelauth/node"
+import { BaseAuthOptions, OrgMemberInfo, User, UserClass } from "@propelauth/node"
 
 export {
     AccessTokenCreationException,
@@ -83,6 +83,7 @@ declare global {
     namespace Express {
         interface Request {
             user?: User
+            userClass?: UserClass
             org?: OrgMemberInfo
         }
     }
