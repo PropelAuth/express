@@ -4,7 +4,7 @@
         "type": "git",
         "url": "https://github.com/PropelAuth/express"
     },
-    "version": "2.1.19",
+    "version": "2.1.22",
     "license": "MIT",
     "keywords": [
         "auth",
