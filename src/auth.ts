@@ -110,6 +110,8 @@ export function initAuth(opts: AuthOptions) {
         validateApiKey: auth.validateApiKey,
         validatePersonalApiKey: auth.validatePersonalApiKey,
         validateOrgApiKey: auth.validateOrgApiKey,
+        fetchPendingInvites: auth.fetchPendingInvites,
+        revokePendingOrgInvite: auth.revokePendingOrgInvite
     }
 }
 
