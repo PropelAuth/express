@@ -74,6 +74,10 @@ export type {
     UsersInOrgQuery,
     UsersPagedResponse,
     UsersQuery,
+    RevokePendingOrgInviteRequest,
+    FetchSamlSpMetadataResponse,
+    SetSamlIdpMetadataRequest,
+    IdpProvider,
 } from "@propelauth/node"
 export { AuthOptions, initAuth } from "./auth"
 export type { RequireOrgMemberArgs } from "./auth"
