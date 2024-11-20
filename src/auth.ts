@@ -111,7 +111,11 @@ export function initAuth(opts: AuthOptions) {
         validatePersonalApiKey: auth.validatePersonalApiKey,
         validateOrgApiKey: auth.validateOrgApiKey,
         fetchPendingInvites: auth.fetchPendingInvites,
-        revokePendingOrgInvite: auth.revokePendingOrgInvite
+        revokePendingOrgInvite: auth.revokePendingOrgInvite,
+        fetchSamlSpMetadata: auth.fetchSamlSpMetadata,
+        setSamlIdpMetadata: auth.setSamlIdpMetadata,
+        samlGoLive: auth.samlGoLive,
+        deleteSamlConnection: auth.deleteSamlConnection,
     }
 }
 
