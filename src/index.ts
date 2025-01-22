@@ -9,6 +9,7 @@ export {
     ApiKeyFetchException,
     ApiKeyUpdateException,
     ApiKeyValidateException,
+    ApiKeyValidateRateLimitedException,
     BadRequestException,
     ChangeUserRoleInOrgException,
     CreateOrgException,
