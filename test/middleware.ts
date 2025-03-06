@@ -7,7 +7,9 @@ import nock from "nock"
 import { v4 as uuid } from "uuid"
 import { initAuth } from "../src"
 
-const AUTH_URL = "https://auth.example.com"
+const BASE_API_URL = "https://propelauth-api.com"
+const AUTH_HOSTNAME = "auth.example.com"
+const AUTH_URL = "https://" + AUTH_HOSTNAME
 const ALGO = "RS256"
 
 afterEach(() => {
@@ -571,9 +573,10 @@ async function setupTokenVerificationMetadataEndpoint() {
     const { publicKey, privateKey } = await generateRsaKeyPair()
     const apiKey = randomString()
 
-    const scope = nock(AUTH_URL)
+    const scope = nock(BASE_API_URL)
         .get("/api/v1/token_verification_metadata")
         .matchHeader("authorization", `Bearer ${apiKey}`)
+        .matchHeader("X-Propelauth-url", AUTH_HOSTNAME)
         .reply(
             200,
             JSON.stringify({
@@ -587,9 +590,10 @@ async function setupTokenVerificationMetadataEndpoint() {
 async function setupErrorTokenVerificationMetadataEndpoint(statusCode: number) {
     const apiKey = randomString()
 
-    const scope = nock(AUTH_URL)
+    const scope = nock(BASE_API_URL)
         .get("/api/v1/token_verification_metadata")
         .matchHeader("authorization", `Bearer ${apiKey}`)
+        .matchHeader("X-Propelauth-url", AUTH_HOSTNAME)
         .reply(statusCode)
 
     return { apiKey, scope }
