@@ -85,6 +85,7 @@ export function initAuth(opts: AuthOptions) {
         createMagicLink: auth.createMagicLink,
         createAccessToken: auth.createAccessToken,
         migrateUserFromExternalSource: auth.migrateUserFromExternalSource,
+        migrateUserPassword: auth.migrateUserPassword,
         disableUser2fa: auth.disableUser2fa,
         clearUserPassword: auth.clearUserPassword,
         inviteUserToOrg: auth.inviteUserToOrg,
