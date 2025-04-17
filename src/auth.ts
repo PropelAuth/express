@@ -6,8 +6,8 @@ import {
     UnauthorizedException,
     UnexpectedException,
     User,
-    UserClass,
     UserAndOrgMemberInfo,
+    UserClass,
 } from "@propelauth/node"
 import { RequiredOrgInfo } from "@propelauth/node/dist/auth"
 import { NextFunction, Request, Response } from "express"
@@ -37,8 +37,9 @@ export function initAuth(opts: AuthOptions) {
     const requireOrgMember = createRequireOrgMemberMiddleware(
         auth.validateAccessTokenAndGetUserWithOrgInfo,
         auth.validateAccessTokenAndGetUserClass,
-        debugMode)
-        
+        debugMode
+    )
+
     const requireOrgMemberWithMinimumRole = createRequireOrgMemberMiddlewareWithMinimumRole(
         auth.validateAccessTokenAndGetUserWithOrgInfoWithMinimumRole,
         auth.validateAccessTokenAndGetUserClass,
@@ -117,6 +118,8 @@ export function initAuth(opts: AuthOptions) {
         setSamlIdpMetadata: auth.setSamlIdpMetadata,
         samlGoLive: auth.samlGoLive,
         deleteSamlConnection: auth.deleteSamlConnection,
+        verifyStepUpTotpChallenge: auth.verifyStepUpTotpChallenge,
+        verifyStepUpGrant: auth.verifyStepUpGrant,
     }
 }
 
@@ -148,9 +151,7 @@ function createRequireOrgMemberMiddleware(
         authorizationHeader: string | undefined,
         requiredOrgInfo: RequriedOrgInfo
     ) => Promise<UserAndOrgMemberInfo>,
-    validateAccessTokenAndGetUserClass: (
-        authorizationHeader: string | undefined,
-    ) => Promise<UserClass>,
+    validateAccessTokenAndGetUserClass: (authorizationHeader: string | undefined) => Promise<UserClass>,
     debugMode: boolean
 ) {
     return function requireOrgMember(args?: RequireOrgMemberArgs) {
@@ -162,9 +163,7 @@ function createRequireOrgMemberMiddleware(
                 return validateAccessTokenAndGetUserWithOrgInfo(authorizationHeader, requiredOrgInfo)
             },
             (authorizationHeader) => {
-                return validateAccessTokenAndGetUserClass(
-                    authorizationHeader
-                )
+                return validateAccessTokenAndGetUserClass(authorizationHeader)
             },
             debugMode,
             orgIdExtractor,
@@ -179,9 +178,7 @@ function createRequireOrgMemberMiddlewareWithMinimumRole(
         requiredOrgInfo: RequriedOrgInfo,
         minimumRole: string
     ) => Promise<UserAndOrgMemberInfo>,
-    validateAccessTokenAndGetUserClass: (
-        authorizationHeader: string | undefined,
-    ) => Promise<UserClass>,
+    validateAccessTokenAndGetUserClass: (authorizationHeader: string | undefined) => Promise<UserClass>,
     debugMode: boolean
 ) {
     return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithMinimumRoleArgs) {
@@ -197,9 +194,7 @@ function createRequireOrgMemberMiddlewareWithMinimumRole(
                 )
             },
             (authorizationHeader) => {
-                return validateAccessTokenAndGetUserClass(
-                    authorizationHeader
-                )
+                return validateAccessTokenAndGetUserClass(authorizationHeader)
             },
             debugMode,
             orgIdExtractor,
@@ -214,9 +209,7 @@ function createRequireOrgMemberMiddlewareWithExactRole(
         requiredOrgInfo: RequriedOrgInfo,
         role: string
     ) => Promise<UserAndOrgMemberInfo>,
-    validateAccessTokenAndGetUserClass: (
-        authorizationHeader: string | undefined,
-    ) => Promise<UserClass>,
+    validateAccessTokenAndGetUserClass: (authorizationHeader: string | undefined) => Promise<UserClass>,
     debugMode: boolean
 ) {
     return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithExactRoleArgs) {
@@ -232,9 +225,7 @@ function createRequireOrgMemberMiddlewareWithExactRole(
                 )
             },
             (authorizationHeader) => {
-                return validateAccessTokenAndGetUserClass(
-                    authorizationHeader
-                )
+                return validateAccessTokenAndGetUserClass(authorizationHeader)
             },
             debugMode,
             orgIdExtractor,
@@ -249,9 +240,7 @@ function createRequireOrgMemberMiddlewareWithPermission(
         requiredOrgInfo: RequriedOrgInfo,
         permission: string
     ) => Promise<UserAndOrgMemberInfo>,
-    validateAccessTokenAndGetUserClass: (
-        authorizationHeader: string | undefined,
-    ) => Promise<UserClass>,
+    validateAccessTokenAndGetUserClass: (authorizationHeader: string | undefined) => Promise<UserClass>,
     debugMode: boolean
 ) {
     return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithPermissionArgs) {
@@ -267,9 +256,7 @@ function createRequireOrgMemberMiddlewareWithPermission(
                 )
             },
             (authorizationHeader) => {
-                return validateAccessTokenAndGetUserClass(
-                    authorizationHeader
-                )
+                return validateAccessTokenAndGetUserClass(authorizationHeader)
             },
             debugMode,
             orgIdExtractor,
@@ -284,9 +271,7 @@ function createRequireOrgMemberMiddlewareWithAllPermissions(
         requiredOrgInfo: RequriedOrgInfo,
         permissions: string[]
     ) => Promise<UserAndOrgMemberInfo>,
-    validateAccessTokenAndGetUserClass: (
-        authorizationHeader: string | undefined,
-    ) => Promise<UserClass>,
+    validateAccessTokenAndGetUserClass: (authorizationHeader: string | undefined) => Promise<UserClass>,
     debugMode: boolean
 ) {
     return function requireOrgMemberWithMinimumRole(args: RequireOrgMemberWithAllPermissionsArgs) {
@@ -302,9 +287,7 @@ function createRequireOrgMemberMiddlewareWithAllPermissions(
                 )
             },
             (authorizationHeader) => {
-                return validateAccessTokenAndGetUserClass(
-                    authorizationHeader
-                )
+                return validateAccessTokenAndGetUserClass(authorizationHeader)
             },
             debugMode,
             orgIdExtractor,
@@ -318,12 +301,10 @@ function requireOrgMemberGenericMiddleware(
         authorizationHeader: string | undefined,
         requiredOrgInfo: RequiredOrgInfo
     ) => Promise<UserAndOrgMemberInfo>,
-    validateAccessTokenAndGetUserClass: (
-        authorizationHeader: string | undefined,
-    ) => Promise<UserClass>,
+    validateAccessTokenAndGetUserClass: (authorizationHeader: string | undefined) => Promise<UserClass>,
     debugMode: boolean,
     orgIdExtractor?: (req: Request) => string,
-    orgNameExtractor?: (req: Request) => string,
+    orgNameExtractor?: (req: Request) => string
 ) {
     return async function (req: Request, res: Response, next: NextFunction) {
         let requiredOrgInfo: RequiredOrgInfo
