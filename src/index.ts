@@ -38,6 +38,7 @@ export {
     UserClass,
     UserMetadata,
     UserNotFoundException,
+    ApiKeyImportException,
 } from "@propelauth/node"
 export type {
     AccessToken,
@@ -93,6 +94,20 @@ export type {
     UsersQuery,
     VerifyStepUpGrantRequest,
     VerifyTotpChallengeRequest,
+    SendSmsMfaCodeRequest,
+    SendSmsMfaCodeRequestResponse,
+    VerifySmsChallengeRequest,
+    VerifySmsChallengeResponse,
+    InviteUserToOrgByUserIdRequest,
+    FetchUserMfaMethodsResponse,
+    ApiKeyUsageQueryRequest,
+    ApiKeyUsageQueryResponse,
+    ApiKeysImportRequest,
+    Employee,
+    MfaPhoneType,
+    MfaPhones,
+    MfaTotpType,
+    
 } from "@propelauth/node"
 export { AuthOptions, initAuth } from "./auth"
 export type { RequireOrgMemberArgs } from "./auth"
