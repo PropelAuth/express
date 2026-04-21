@@ -110,7 +110,14 @@ export type {
     
 } from "@propelauth/node"
 export { AuthOptions, initAuth } from "./auth"
-export type { RequireOrgMemberArgs } from "./auth"
+export type {
+    InitAuthResult,
+    RequireOrgMemberArgs,
+    RequireOrgMemberWithMinimumRoleArgs,
+    RequireOrgMemberWithExactRoleArgs,
+    RequireOrgMemberWithPermissionArgs,
+    RequireOrgMemberWithAllPermissionsArgs,
+} from "./auth"
 export type { BaseAuthOptions, User, OrgMemberInfo }
 
 declare global {
