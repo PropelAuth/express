@@ -109,6 +109,26 @@ export type {
     MfaTotpType,
     
 } from "@propelauth/node"
+export {
+    ReengagementReportInterval,
+    ChampionReportInterval,
+    ChurnReportInterval,
+    GrowthReportInterval,
+    AttritionReportInterval,
+    TopInviterReportInterval,
+    ChartMetric,
+    ChartMetricCadence,
+} from "@propelauth/node"
+export type {
+    ReportPagination,
+    UserReport,
+    UserReportRecord,
+    OrgReport,
+    OrgReportRecord,
+    UserOrgMembershipForReport,
+    ChartData,
+    ChartDataPoint,
+} from "@propelauth/node"
 export { AuthOptions, initAuth } from "./auth"
 export type {
     InitAuthResult,
