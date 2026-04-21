@@ -16,11 +16,22 @@ export interface AuthOptions extends BaseAuthOptions {
     debugMode?: boolean
 }
 
-export function initAuth(opts: AuthOptions) {
+type Middleware = (req: Request, res: Response, next: NextFunction) => Promise<void>
+
+export type InitAuthResult = ReturnType<typeof initBaseAuth> & {
+    requireUser: Middleware
+    optionalUser: Middleware
+    requireOrgMember: (args?: RequireOrgMemberArgs) => Middleware
+    requireOrgMemberWithMinimumRole: (args: RequireOrgMemberWithMinimumRoleArgs) => Middleware
+    requireOrgMemberWithExactRole: (args: RequireOrgMemberWithExactRoleArgs) => Middleware
+    requireOrgMemberWithPermission: (args: RequireOrgMemberWithPermissionArgs) => Middleware
+    requireOrgMemberWithAllPermissions: (args: RequireOrgMemberWithAllPermissionsArgs) => Middleware
+}
+
+export function initAuth(opts: AuthOptions): InitAuthResult {
     const auth = initBaseAuth(opts)
     const debugMode = opts.debugMode || false
 
-    // Create middlewares
     const requireUser = createUserExtractingMiddleware({
         validateAccessTokenAndGetUser: auth.validateAccessTokenAndGetUser,
         validateAccessTokenAndGetUserClass: auth.validateAccessTokenAndGetUserClass,
@@ -62,6 +73,7 @@ export function initAuth(opts: AuthOptions) {
     )
 
     return {
+        ...auth,
         requireUser,
         optionalUser,
         requireOrgMember,
@@ -69,57 +81,6 @@ export function initAuth(opts: AuthOptions) {
         requireOrgMemberWithExactRole,
         requireOrgMemberWithPermission,
         requireOrgMemberWithAllPermissions,
-        fetchUserMetadataByUserId: auth.fetchUserMetadataByUserId,
-        fetchUserMetadataByEmail: auth.fetchUserMetadataByEmail,
-        fetchUserMetadataByUsername: auth.fetchUserMetadataByUsername,
-        fetchBatchUserMetadataByUserIds: auth.fetchBatchUserMetadataByUserIds,
-        fetchBatchUserMetadataByEmails: auth.fetchBatchUserMetadataByEmails,
-        fetchBatchUserMetadataByUsernames: auth.fetchBatchUserMetadataByUsernames,
-        fetchOrg: auth.fetchOrg,
-        fetchOrgByQuery: auth.fetchOrgByQuery,
-        fetchUsersByQuery: auth.fetchUsersByQuery,
-        fetchUsersInOrg: auth.fetchUsersInOrg,
-        createUser: auth.createUser,
-        updateUserMetadata: auth.updateUserMetadata,
-        updateUserEmail: auth.updateUserEmail,
-        updateUserPassword: auth.updateUserPassword,
-        createMagicLink: auth.createMagicLink,
-        createAccessToken: auth.createAccessToken,
-        migrateUserFromExternalSource: auth.migrateUserFromExternalSource,
-        migrateUserPassword: auth.migrateUserPassword,
-        disableUser2fa: auth.disableUser2fa,
-        clearUserPassword: auth.clearUserPassword,
-        inviteUserToOrg: auth.inviteUserToOrg,
-        createOrg: auth.createOrg,
-        addUserToOrg: auth.addUserToOrg,
-        deleteUser: auth.deleteUser,
-        disableUser: auth.disableUser,
-        enableUser: auth.enableUser,
-        enableUserCanCreateOrgs: auth.enableUserCanCreateOrgs,
-        disableUserCanCreateOrgs: auth.disableUserCanCreateOrgs,
-        changeUserRoleInOrg: auth.changeUserRoleInOrg,
-        removeUserFromOrg: auth.removeUserFromOrg,
-        updateOrg: auth.updateOrg,
-        deleteOrg: auth.deleteOrg,
-        allowOrgToSetupSamlConnection: auth.allowOrgToSetupSamlConnection,
-        disallowOrgToSetupSamlConnection: auth.disallowOrgToSetupSamlConnection,
-        fetchApiKey: auth.fetchApiKey,
-        fetchCurrentApiKeys: auth.fetchCurrentApiKeys,
-        fetchArchivedApiKeys: auth.fetchArchivedApiKeys,
-        createApiKey: auth.createApiKey,
-        updateApiKey: auth.updateApiKey,
-        deleteApiKey: auth.deleteApiKey,
-        validateApiKey: auth.validateApiKey,
-        validatePersonalApiKey: auth.validatePersonalApiKey,
-        validateOrgApiKey: auth.validateOrgApiKey,
-        fetchPendingInvites: auth.fetchPendingInvites,
-        revokePendingOrgInvite: auth.revokePendingOrgInvite,
-        fetchSamlSpMetadata: auth.fetchSamlSpMetadata,
-        setSamlIdpMetadata: auth.setSamlIdpMetadata,
-        samlGoLive: auth.samlGoLive,
-        deleteSamlConnection: auth.deleteSamlConnection,
-        verifyStepUpTotpChallenge: auth.verifyStepUpTotpChallenge,
-        verifyStepUpGrant: auth.verifyStepUpGrant,
     }
 }
 

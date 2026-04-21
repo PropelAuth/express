@@ -122,8 +122,35 @@ export type {
     SocialLoginToken,
     SocialLoginTokensResponse,
 } from "@propelauth/node"
+export {
+    ReengagementReportInterval,
+    ChampionReportInterval,
+    ChurnReportInterval,
+    GrowthReportInterval,
+    AttritionReportInterval,
+    TopInviterReportInterval,
+    ChartMetric,
+    ChartMetricCadence,
+} from "@propelauth/node"
+export type {
+    ReportPagination,
+    UserReport,
+    UserReportRecord,
+    OrgReport,
+    OrgReportRecord,
+    UserOrgMembershipForReport,
+    ChartData,
+    ChartDataPoint,
+} from "@propelauth/node"
 export { AuthOptions, initAuth } from "./auth"
-export type { RequireOrgMemberArgs } from "./auth"
+export type {
+    InitAuthResult,
+    RequireOrgMemberArgs,
+    RequireOrgMemberWithMinimumRoleArgs,
+    RequireOrgMemberWithExactRoleArgs,
+    RequireOrgMemberWithPermissionArgs,
+    RequireOrgMemberWithAllPermissionsArgs,
+} from "./auth"
 export type { BaseAuthOptions, User, OrgMemberInfo }
 
 declare global {
