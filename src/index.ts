@@ -39,6 +39,7 @@ export {
     UserMetadata,
     UserNotFoundException,
     ApiKeyImportException,
+    MigrateOrgToIsolatedException
 } from "@propelauth/node"
 export type {
     AccessToken,
